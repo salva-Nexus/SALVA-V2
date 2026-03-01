@@ -1,0 +1,2 @@
+@Singleton/=src/SalvaSingleton/
+@BaseRegistry/=src/SalvaSingleton/
