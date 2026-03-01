@@ -19,16 +19,15 @@ contract TestSingleton is StdInvariant, Test {
 
     function setUp() external {
         DeploySingleton deploy = new DeploySingleton();
-        (singleton, , owner, registrar) = deploy.run();
+        (singleton,, owner, registrar) = deploy.run();
 
+        for (uint256 i = 0; i < 20;) {
+            vm.prank(owner);
+            registry.push(new SalvaRegistry(address(singleton), registrar));
 
-        for(uint256 i = 0; i < 20;) {
-          vm.prank(owner);
-          registry.push(new SalvaRegistry(address(singleton), registrar));
-
-          unchecked {
-            i++;
-          }
+            unchecked {
+                i++;
+            }
         }
         handler = new Handler(singleton, registry, registrar, owner);
         targetContract(address(handler));
@@ -39,6 +38,6 @@ contract TestSingleton is StdInvariant, Test {
     }
 
     function invariant_Registry_Can_Only_Initialize_Once() external view {
-      assertEq(handler._getReinitializationSuccessCount(), 0);
+        assertEq(handler._getReinitializationSuccessCount(), 0);
     }
 }

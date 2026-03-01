@@ -21,13 +21,27 @@ contract DeploySingleton is Script {
         vm.stopBroadcast();
     }
 
+    modifier broadcastLive() {
+        vm.startBraodcast();
+        _;
+        vm.stopBroadcast();
+    }
+
     function run() external returns (Singleton, SalvaRegistry, address, address) {
         return deploySingleton();
     }
 
-    function deploySingleton() public broadcast returns (Singleton, SalvaRegistry, address, address) {
+    function deploySingletonForTest() public broadcast returns (Singleton, SalvaRegistry, address, address) {
         Singleton singleton = new Singleton();
         SalvaRegistry resgistry = new SalvaRegistry(address(singleton), registrar);
         return (singleton, resgistry, deployer, registrar);
+    }
+
+    function deployLive() public broadcastLive {
+        Singleton singleton = new Singleton();
+        SalvaRegistry resgistry = new SalvaRegistry(address(singleton), msg.sender);
+
+        console.log(address(singleton));
+        console.log(address(registry));
     }
 }
