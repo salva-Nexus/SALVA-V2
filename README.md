@@ -1,4 +1,4 @@
-# Salva Protocol V2
+# Salva V2
 
 A dual-layer architecture for gas-efficient on-chain identity resolution.
 
@@ -93,3 +93,60 @@ One thing worth being clear on: `BaseRegistry` still makes a real external `CALL
 **No EOA namespaces** — the same `EXTCODESIZE` check blocks externally owned accounts from registering a namespace. Only deployed contracts qualify.
 
 **Reentrancy guard** — the Singleton uses EIP-1153 transient storage as a per-transaction lock. A registry cannot call `initializeRegistry` more than once within the same transaction.
+
+## 🚀 Installation & Setup
+
+### 1. Clone the Repository
+
+Clone the project along with its submodules to ensure all dependencies (OpenZeppelin, Forge-Std) are included:
+
+```bash
+git clone --recursive https://github.com/salva-Nexus/SALVA-V2.git
+cd SALVA-V2
+```
+
+### 2. Install Dependencies
+
+If you have already cloned the repo without submodules, or need to initialize them manually:
+
+```bash
+# Initialize and update submodules
+git submodule update --init --recursive
+
+# Install Forge dependencies
+forge install
+```
+
+### 3. Build the Project
+
+Verify that the environment is set up correctly by compiling the contracts:
+
+```bash
+forge build
+```
+
+---
+
+## 🛠 Quick Start Integration
+
+### 1. Inherit from BaseRegistry
+
+Ensure your contract inherits `BaseRegistry.sol` and provides the Singleton address to the constructor.
+
+### 2. Deploy & Initialize
+
+Because of the `EXTCODESIZE` check, you cannot initialize in the constructor. Your deployment script should look like this:
+
+```solidity
+// Example Deployment Script
+UserRegistry registry = new UserRegistry(SINGLETON_ADDRESS);
+registry.initialize(); // This calls _initialize() internally
+```
+
+### 3. Run Tests
+
+Validate your integration using the built-in test suite:
+
+```bash
+forge test
+```

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {BaseRegistry} from "@BaseRegistry/Base/BaseRegistry.sol";
+import {BaseRegistry} from "@BaseRegistry/BaseRegistry.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract SalvaRegistry is BaseRegistry, AccessControl {

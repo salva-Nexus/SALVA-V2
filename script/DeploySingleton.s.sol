@@ -3,7 +3,8 @@ pragma solidity ^0.8.28;
 
 import {Script} from "forge-std/Script.sol";
 import {Singleton} from "@Singleton/Singleton.sol";
-import {SalvaRegistry} from "../src/SalvaSingleton/SalvaRegistry/Registry.sol";
+import {SalvaRegistry} from "../src/SalvaRegistry/Registry.sol";
+import {console} from "forge-std/Test.sol";
 
 contract DeploySingleton is Script {
     uint256 deployerKey;
@@ -22,13 +23,17 @@ contract DeploySingleton is Script {
     }
 
     modifier broadcastLive() {
-        vm.startBraodcast();
+        vm.startBroadcast();
         _;
         vm.stopBroadcast();
     }
 
     function run() external returns (Singleton, SalvaRegistry, address, address) {
-        return deploySingleton();
+        if (block.chainid == 31337) {
+            return deploySingletonForTest();
+        } else {
+            deployLive();
+        }
     }
 
     function deploySingletonForTest() public broadcast returns (Singleton, SalvaRegistry, address, address) {
@@ -39,7 +44,7 @@ contract DeploySingleton is Script {
 
     function deployLive() public broadcastLive {
         Singleton singleton = new Singleton();
-        SalvaRegistry resgistry = new SalvaRegistry(address(singleton), msg.sender);
+        SalvaRegistry registry = new SalvaRegistry(address(singleton), msg.sender);
 
         console.log(address(singleton));
         console.log(address(registry));

@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {Test, console} from "forge-std/Test.sol";
 import {StdInvariant} from "forge-std/StdInvariant.sol";
 import {Singleton} from "@Singleton/Singleton.sol";
-import {SalvaRegistry} from "../../src/SalvaSingleton/SalvaRegistry/Registry.sol";
+import {SalvaRegistry} from "../../src/SalvaRegistry/Registry.sol";
 import {DeploySingleton} from "../../script/DeploySingleton.s.sol";
 import {Handler} from "./SingletonHandler.t.sol";
 

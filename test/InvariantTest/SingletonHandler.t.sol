@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {Singleton} from "@Singleton/Singleton.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {StdInvariant} from "forge-std/StdInvariant.sol";
-import {SalvaRegistry} from "../../src/SalvaSingleton/SalvaRegistry/Registry.sol";
+import {SalvaRegistry} from "../../src/SalvaRegistry/Registry.sol";
 
 contract Handler is StdInvariant, Test {
     Singleton private singleton;
