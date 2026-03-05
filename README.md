@@ -1,4 +1,12 @@
-# Salva V2
+<div align="center">
+  <h1>🛡️ Salva </h1>
+  <p><b>On-Chain Payment Infrastructure for the Next Billion</b></p>
+  
+  <img src="https://img.shields.io/badge/Network-Base-blue?style=for-the-badge&logo=base" />
+  <img src="https://img.shields.io/badge/Stack-Node.js_|_React-61DAFB?style=for-the-badge&logo=react" />
+  <img src="https://img.shields.io/badge/Standard-ERC--4337-orange?style=for-the-badge" />
+</div>
+
 
 A dual-layer architecture for gas-efficient on-chain identity resolution.
 
