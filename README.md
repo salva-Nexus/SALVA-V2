@@ -20,30 +20,61 @@ The Singleton uses Salva Mapping Abstraction (SMA) that reduces every mapping lo
 `BaseRegistry` holds a single `immutable` reference to the Singleton and exposes two `internal` functions your registry uses to interact with it. Your registry is also expected to implement three `external view` functions — `resolveAddress`, `resolveNumber`, and `namespace` — which are declared `virtual` in `BaseRegistry` and can be fulfilled by forwarding to the Singleton.
 
 ```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+import {BaseRegistry} from "./BaseRegistry.sol";
+
 contract UserRegistry is BaseRegistry {
     uint32 public myNamespace;
 
     constructor(address _singleton) BaseRegistry(_singleton) {
+        // Don't initialize here! Contract not deployed yet!
+    }
+
+    /**
+     * @notice Initialize the registry and receive namespace
+     * @dev Must be called AFTER deployment, not in constructor
+     */
+    function initialize() external {
+        require(myNamespace == 0, "Already initialized");
         myNamespace = _initialize();
     }
 
     function register(uint128 _id, address _user) external {
+        require(myNamespace != 0, "Not initialized");
         // your access logic here
         _linkNumber(_id, _user);
     }
 
-    function resolveAddress(uint128 _num, address _registry) external view override returns (address) {
+    function resolveAddress(uint128 _num, address _registry) 
+        external 
+        view 
+        override 
+        returns (address) 
+    {
         return singleton.resolveAddress(_num, _registry);
     }
 
-    function resolveNumber(address _addr, address _registry) external view override returns (uint128) {
+    function resolveNumber(address _addr, address _registry) 
+        external 
+        view 
+        override 
+        returns (uint128) 
+    {
         return singleton.resolveNumber(_addr, _registry);
     }
 
-    function namespace(address _registry) external view override returns (uint32) {
+    function namespace(address _registry) 
+        external 
+        view 
+        override 
+        returns (uint32) 
+    {
         return singleton.namespace(_registry);
     }
 }
+
 ```
 
 ---
