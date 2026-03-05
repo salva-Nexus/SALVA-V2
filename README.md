@@ -37,12 +37,10 @@ contract UserRegistry is BaseRegistry {
      * @dev Must be called AFTER deployment, not in constructor
      */
     function initialize() external {
-        require(myNamespace == 0, "Already initialized");
         myNamespace = _initialize();
     }
 
     function register(uint128 _id, address _user) external {
-        require(myNamespace != 0, "Not initialized");
         // your access logic here
         _linkNumber(_id, _user);
     }
