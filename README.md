@@ -7,9 +7,6 @@
   <img src="https://img.shields.io/badge/Standard-ERC--4337-orange?style=for-the-badge" />
 </div>
 
-
-A dual-layer architecture for gas-efficient on-chain identity resolution.
-
 ---
 
 ## Overview
