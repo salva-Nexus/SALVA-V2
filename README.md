@@ -85,7 +85,7 @@ Calls `initializeRegistry()` on the Singleton (selector `0xb2a4b788`) and return
 
 The call writes the selector to `0x00`, calls the Singleton with 4 bytes of calldata, and reads the return value back from `0x00` — bypassing Solidity's return-data handling entirely.
 
-**Important:** The Singleton's `onlyRegistry` modifier uses `caller()` to assign the namespace, so `_initialize()` must be called from the registry contract itself. Calling it through a proxy or intermediate contract will assign the namespace to the wrong address and revert on any future call from your registry.
+**Important:** The Singleton's `onlyRegistry` modifier uses `caller()` to assign the namespace, so `_initialize()` must be called from the registry contract itself. Calling it through an intermediate contract will assign the namespace to the wrong address and revert on any future call from your registry.
 
 The modifier also checks `EXTCODESIZE` on the caller, which means `_initialize()` cannot be called by an EOA and from within a constructor (where `extcodesize` is still 0). Deploy your registry first, then call `_initialize()` in a separate transaction or post-deploy setup step.
 
