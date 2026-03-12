@@ -14,16 +14,11 @@ contract Handler is StdInvariant, Test {
     uint256 private DoubleInitializationFailure;
     uint256 private DoubleInitializationSuccess;
 
-    constructor(
-        Singleton _singleton,
-        SalvaRegistry[] memory _registry,
-        address _registrar,
-        address _owner
-    ) {
+    constructor(Singleton _singleton, SalvaRegistry[] memory _registry, address _registrar, address _owner) {
         singleton = _singleton;
         registrar = _registrar;
         owner = _owner;
-        for (uint256 i = 0; i < _registry.length; ) {
+        for (uint256 i = 0; i < _registry.length;) {
             registry.push(_registry[i]);
 
             unchecked {
@@ -51,17 +46,11 @@ contract Handler is StdInvariant, Test {
         } catch {}
     }
 
-    function _getReinitializationSuccessCount()
-        external
-        view
-        returns (uint256)
-    {
+    function _getReinitializationSuccessCount() external view returns (uint256) {
         return DoubleInitializationSuccess;
     }
 
-    function _pickRegistry(
-        uint256 _random
-    ) internal view returns (SalvaRegistry) {
+    function _pickRegistry(uint256 _random) internal view returns (SalvaRegistry) {
         return registry[_random % registry.length];
     }
 }

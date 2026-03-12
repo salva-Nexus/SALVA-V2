@@ -167,10 +167,7 @@ contract Singleton {
      *
      * @dev Uses SMA to derive storage pointer with one keccak256 instead of two.
      */
-    function resolveAddress(
-        uint128 _num,
-        address _registry
-    ) external view returns (address _wallet) {
+    function resolveAddress(uint128 _num, address _registry) external view returns (address _wallet) {
         bytes32 nSpace = namespace(_registry);
         assembly {
             mstore(0x00, nSpace)
@@ -188,10 +185,7 @@ contract Singleton {
      *
      * @dev Uses SMA to derive storage pointer with one keccak256 instead of two.
      */
-    function resolveNumber(
-        address _wallet,
-        address _registry
-    ) external view returns (uint128 _num) {
+    function resolveNumber(address _wallet, address _registry) external view returns (uint128 _num) {
         bytes32 nSpace = namespace(_registry);
         assembly {
             mstore(0x00, nSpace)
