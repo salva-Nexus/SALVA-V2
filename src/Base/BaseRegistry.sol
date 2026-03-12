@@ -12,19 +12,20 @@ import {Singleton} from "@Singleton/Singleton.sol";
  * A high-level Solidity contract calling the Singleton would pay for Solidity's ABI encoder
  * (memory expansion, free pointer updates, return-data copying). BaseRegistry eliminates this
  * overhead by making all Singleton calls through hand-rolled assembly that writes calldata
- * directly into the low memory slots (0x00–0x43) and reads return values in place.
+ * directly into low memory slots (0x00–0x43) and reads return values in place.
  *
- * NAMESPACE CACHING:
- * The Singleton is the authoritative source for a registry's namespace ID. BaseRegistry does
- * not enforce local caching — child contracts may store the ID returned by `_initialize()` in
- * a state variable (one SSTORE, cheap SLOADs after) or omit it and read from the Singleton
- * on demand. The right choice depends on how frequently the child needs its own namespace ID.
+ * GAS OPTIMIZATION STRATEGY:
+ * 1. Manual calldata packing — function selector and arguments are written directly to memory
+ *    using mstore, bypassing Solidity's ABI encoder entirely.
+ * 2. Skipped free pointer updates — memory writes happen at fixed offsets (0x00, 0x04, 0x24)
+ *    without touching the free memory pointer at 0x40.
+ * 3. In-place return reading — return values are read directly from memory slot 0x00 instead
+ *    of being copied through Solidity's ABI decoder.
  *
  * INHERITANCE MODEL:
- * Consumers inherit this contract and call `_initialize()` once post-deployment to register
- * with the Singleton, then call `_linkNumber()` to record number-to-address mappings. The three
- * virtual view functions (`resolveAddress`, `resolveNumber`, `namespace`) must be implemented
- * by the child — typically by forwarding directly to `singleton`.
+ * Consumers inherit this contract and call `_linkNumber()` to record number-to-address mappings.
+ * The three virtual view functions (`resolveAddress`, `resolveNumber`, `namespace`) must be
+ * implemented by the child — typically by forwarding directly to `SINGLETON`.
  */
 abstract contract BaseRegistry {
     /**
@@ -43,44 +44,6 @@ abstract contract BaseRegistry {
     }
 
     /**
-     * @notice Registers this contract with the Singleton and returns its assigned Namespace ID.
-     * @dev Must be called once after deployment. Cannot be called from within a constructor
-     * because the Singleton's `onlyRegistry` modifier rejects callers where `extcodesize == 0`.
-     *
-     * Assembly walk-through:
-     *
-     * 1. Selector placement:
-     *    `shl(0xe0, 0xb2a4b788)` shifts the `initializeRegistry()` selector 224 bits left,
-     *    placing it in the top 4 bytes of the 32-byte word written to 0x00. Bytes 0x04–0x1f
-     *    are zero — no further calldata is needed since `initializeRegistry` takes no arguments.
-     *
-     * 2. Call:
-     *    `call(gas(), _singleton, 0x00, 0x00, 0x04, 0x00, 0x20)` — forwards all remaining gas,
-     *    sends 4 bytes of calldata from 0x00, and writes 32 bytes of return data back to 0x00.
-     *    The Singleton performs a manual `return(0x00, 0x20)` with the assigned namespace ID,
-     *    so the return value lands directly at 0x00 without any ABI decoding overhead.
-     *
-     * 3. Return value:
-     *    `mload(0x00)` reads the namespace ID that the Singleton wrote into the return slot.
-     *    The free memory pointer at 0x40 is never updated — this is intentional and safe
-     *    because no Solidity memory allocation follows this assembly block.
-     *
-     * @return _nSpace The uint32 Namespace ID assigned to this registry by the Singleton.
-     */
-    function _initialize() internal returns (uint32 _nSpace) {
-        address _singleton = address(SINGLETON);
-        assembly {
-            mstore(0x00, shl(0xe0, 0xb2a4b788))
-            let success := call(gas(), _singleton, 0x00, 0x00, 0x04, 0x00, 0x20)
-            if iszero(success) {
-                revert(0x00, 0x00)
-            }
-            // return namespace
-            _nSpace := mload(0x00)
-        }
-    }
-
-    /**
      * @notice Links an account number to a wallet address under this registry's namespace.
      * @dev Forwards to `Singleton.linkNumber()` via a raw assembly call, bypassing Solidity's
      * ABI encoder to avoid memory expansion and free pointer overhead.
@@ -94,8 +57,7 @@ abstract contract BaseRegistry {
      *    `mstore(0x04, _num)`  — writes _num  (uint128) right-aligned into bytes 0x04–0x23.
      *    `mstore(0x24, _addr)` — writes _addr (address) right-aligned into bytes 0x24–0x43.
      *    This produces the same memory layout as standard ABI encoding for (uint128, address)
-     *    without touching the free memory pointer at 0x40. The commented-out `mload(0x40)` is
-     *    a deliberate omission — skipping the free pointer update is the source of the gas saving.
+     *    without touching the free memory pointer at 0x40.
      *
      * 3. Call:
      *    `call(gas(), _singleton, 0x00, 0x00, 0x44, 0x00, 0x00)` — sends 68 bytes of calldata
@@ -103,16 +65,16 @@ abstract contract BaseRegistry {
      *    The Singleton reads arguments directly from calldata offsets 0x04 and 0x24, which
      *    aligns exactly with the layout written here.
      *
+     *
      * @param _num  The 128-bit account number to register.
-     * @param _addr The wallet address to link to `_num`.
+     * @param _wallet The wallet address to link to `_num`.
      */
-    function _linkNumber(uint128 _num, address _addr) internal {
+    function _linkNumber(uint128 _num, address _wallet) internal {
         address _singleton = address(SINGLETON);
         assembly {
-            // let ptr := mload(0x40)
             mstore(0x00, shl(0xe0, 0x52d067c4))
             mstore(0x04, _num)
-            mstore(0x24, _addr)
+            mstore(0x24, _wallet)
             let success := call(gas(), _singleton, 0x00, 0x00, 0x44, 0x00, 0x00)
             if iszero(success) {
                 revert(0x00, 0x00)
@@ -122,7 +84,7 @@ abstract contract BaseRegistry {
 
     /**
      * @notice Resolves an account number to its linked wallet address.
-     * @dev Child contracts should implement this by forwarding to `singleton.resolveAddress()`.
+     * @dev Child contracts should implement this by forwarding to `SINGLETON.resolveAddress()`.
      * @param _num      The 128-bit account number to look up.
      * @param _registry The registry whose namespace should be searched.
      * @return          The linked wallet address, or address(0) if not found.
@@ -131,18 +93,18 @@ abstract contract BaseRegistry {
 
     /**
      * @notice Resolves a wallet address back to its linked account number.
-     * @dev Child contracts should implement this by forwarding to `singleton.resolveNumber()`.
-     * @param _addr     The wallet address to look up.
+     * @dev Child contracts should implement this by forwarding to `SINGLETON.resolveNumber()`.
+     * @param _wallet   The wallet address to look up.
      * @param _registry The registry whose namespace should be searched.
      * @return          The linked account number, or 0 if not found.
      */
-    function resolveNumber(address _addr, address _registry) external view virtual returns (uint128);
+    function resolveNumber(address _wallet, address _registry) external view virtual returns (uint128);
 
     /**
      * @notice Returns the Namespace ID assigned to a given registry.
-     * @dev Child contracts should implement this by forwarding to `singleton.namespace()`.
+     * @dev Child contracts should implement this by forwarding to `SINGLETON.namespace()`.
      * @param _registry The registry address to query.
-     * @return          The assigned uint32 Namespace ID, or 0 if unregistered.
+     * @return          The assigned bytes32 Namespace ID, or 0 if unregistered.
      */
-    function namespace(address _registry) external view virtual returns (uint32);
+    function namespace(address _registry) external view virtual returns (bytes32);
 }

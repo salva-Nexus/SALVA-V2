@@ -28,25 +28,43 @@ contract DeploySingleton is Script {
         vm.stopBroadcast();
     }
 
-    function run() external returns (Singleton, SalvaRegistry, address, address) {
+    function run()
+        external
+        returns (Singleton, SalvaRegistry, address, address)
+    {
         if (block.chainid == 31337) {
             return deploySingletonForTest();
         } else {
-            deployLive();
+            return deployLive();
         }
     }
 
-    function deploySingletonForTest() public broadcast returns (Singleton, SalvaRegistry, address, address) {
+    function deploySingletonForTest()
+        public
+        broadcast
+        returns (Singleton, SalvaRegistry, address, address)
+    {
         Singleton singleton = new Singleton();
-        SalvaRegistry resgistry = new SalvaRegistry(address(singleton), registrar);
-        return (singleton, resgistry, deployer, registrar);
+        SalvaRegistry registry = new SalvaRegistry(
+            address(singleton),
+            registrar
+        );
+        return (singleton, registry, deployer, registrar);
     }
 
-    function deployLive() public broadcastLive {
+    function deployLive()
+        public
+        broadcastLive
+        returns (Singleton, SalvaRegistry, address, address)
+    {
         Singleton singleton = new Singleton();
-        SalvaRegistry registry = new SalvaRegistry(address(singleton), msg.sender);
-
+        SalvaRegistry registry = new SalvaRegistry(
+            address(singleton),
+            msg.sender
+        );
         console.log(address(singleton));
         console.log(address(registry));
+        
+        return (singleton, registry, deployer, registrar);
     }
 }

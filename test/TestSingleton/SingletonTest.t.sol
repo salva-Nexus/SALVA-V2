@@ -19,28 +19,11 @@ contract TestSingleton is Test {
         (singleton, registry, owner, registrar) = deploy.run();
     }
 
-    modifier initialized() {
-        vm.prank(owner);
-        registry.initialize();
-        _;
+    function test_Initialize() external view {
+        assertEq(registry.namespace(address(registry)), keccak256(abi.encode(registry)));
     }
 
-    function test_Initialize() external {
-        vm.prank(owner);
-        uint256 prevGas = gasleft();
-        registry.initialize();
-
-        uint256 currentGasLeft = gasleft();
-        uint256 totalGasSpent = prevGas - currentGasLeft;
-
-        console.log("PREV GAS: ", prevGas);
-        console.log("CURRENT GAS: ", currentGasLeft);
-        console.log("TOTAL GAS SPENT: ", totalGasSpent);
-
-        assertEq(registry.namespace(address(registry)), 1);
-    }
-
-    function test_linkNumber() external initialized {
+    function test_linkNumber() external {
         vm.prank(registrar);
         uint256 prevGas = gasleft();
         registry.linkNumber(acctNumber, EOA);
