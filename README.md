@@ -31,7 +31,7 @@ forge build
 ### Singleton Address
 
 **Base Mainnet:** `<SINGLETON_ADDRESS_HERE>`  
-**Base Testnet:** `<SINGLETON_ADDRESS_HERE>`
+**Base Testnet:** `0x679816DA395418c2c72BAD63652badC10Fe78A68`
 
 The Singleton is already deployed. Just use the address above.
 
