@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 /**
  * @title Salva Singleton
- * @author Salva Protocol
+ * @author Charlie @ Salva Protocol
  * @notice Core registry enabling namespace-isolated account number to address resolution.
  *
  * @dev SALVA MAPPING ABSTRACTION (SMA):

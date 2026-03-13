@@ -5,7 +5,7 @@ import {Singleton} from "@Singleton/Singleton.sol";
 
 /**
  * @title BaseRegistry
- * @author Salva Protocol
+ * @author Charlie @ Salva Protocol
  * @notice Abstract base contract for building namespace-isolated registries on top of the Salva Singleton.
  *
  * @dev DESIGN INTENT:
