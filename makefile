@@ -21,8 +21,8 @@ DEPLOY-TO-BASE_TESTNET:
 
 # --- ACCESS CONTROL (ROLES) ---
 # Fixed length mismatch by ensuring keccak result is captured correctly
-GRANT-ROLE-TESTNET:
-	cast send ${REGISTRY_CONTRACT_ADDRESS} "grantRole(bytes32,address)" $$(cast keccak "REGISTRAR_ROLE") ${BACKEND_MANAGER_ADDRESS} --rpc-url ${BASE_SEPOLIA_RPC_URL} --account mainKey
-
 GRANT-ROLE-MAINNET:
-	cast send ${REGISTRY_CONTRACT_ADDRESS} "grantRole(bytes32,address)" $$(cast keccak "REGISTRAR_ROLE") ${BACKEND_MANAGER_ADDRESS} --rpc-url ${BASE_SEPOLIA_RPC_URL} --account mainKey
+	cast send ${REGISTRY_CONTRACT_ADDRESS} "grantRole(bytes32,address)" $$(cast keccak "REGISTRAR") ${BACKEND_MANAGER_ADDRESS} --rpc-url ${BASE_MAINNET_RPC_URL} --account mainKey
+
+GRANT-ROLE-TESTNET:
+	cast send ${REGISTRY_CONTRACT_ADDRESS} "grantRole(bytes32,address)" $$(cast keccak "REGISTRAR") ${BACKEND_MANAGER_ADDRESS} --rpc-url ${BASE_SEPOLIA_RPC_URL} --account mainKey
