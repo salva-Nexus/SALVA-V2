@@ -26,6 +26,7 @@ contract TestSingleton is Test {
     }
 
     modifier initialized() {
+        // MultiSig Validation
         vm.startPrank(owner);
         multisig.proposeInitialization("@salva", address(registry));
         multisig.validateRegistry(address(registry));
