@@ -125,7 +125,7 @@ contract TestSingleton is Test {
         vm.stopPrank();
     }
 
-    function test_Enforce_Prefix() external  {
+    function test_Enforce_Prefix() external {
         string memory IDENTIFIER = ".salva";
         Registry2 reg2 = new Registry2(address(singleton));
 
