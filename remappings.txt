@@ -1,2 +1,14 @@
 @Singleton/=src/SalvaSingleton/
-@BaseRegistry/=src/Base/
+@Modifier/=src/SalvaModules/
+@Salt/=src/SalvaModules/
+@Storage/=src/SalvaModules/
+@Initialize/=src/SalvaModules/
+@BaseSingleton/=src/SalvaModules/
+@LinkNumber/=src/SalvaModules/Aliases/NumberAlias
+@LinkName/=src/SalvaModules/Aliases/NameAlias
+@UnlinkNumber/=src/SalvaModules/Aliases/NumberAlias
+@UnlinkName/=src/SalvaModules/Aliases/NameAlias
+@Errors/=src/SalvaMultiSig
+@MultiSigStorage/=src/SalvaMultiSig
+@MultiSigModifier/=src/SalvaMultiSig/
+@MultiSig/=src/SalvaMultiSig/
