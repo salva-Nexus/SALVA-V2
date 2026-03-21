@@ -150,15 +150,6 @@ abstract contract LinkName is BaseSingleton {
     // 2. sstore(walletToNamePtr, weldedName)
     //    Registers the reverse mapping: wallet → weldedName.
     //    Enforces the one-name-per-wallet invariant on future calls.
-    //
-    // ─────────────────────────────────────────────────────────────────────
-    // INVARIANT TESTING HOOK
-    // ─────────────────────────────────────────────────────────────────────
-    // nameToWalletPtr is pushed to storedHash after every successful call.
-    // The test suite reads these pointers and asserts no two different names
-    // ever produced the same storage slot — proving collision resistance of
-    // the ADD+salt pointer derivation without keccak256 on the key.
-    // Remove storedHash, _hash, storedHash.push, and getHash() before mainnet.
     function linkNameAlias(string memory _name, address _wallet) external phishingProof(_name) {
         assembly {
             // STEP 1 — load namespace via keccak(caller ++ slot)
