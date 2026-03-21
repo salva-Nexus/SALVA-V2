@@ -18,6 +18,7 @@ abstract contract TestMultiSig is BaseTest {
         vm.expectRevert(abi.encodeWithSelector(Errors.Errors__Registry_Init_Proposed.selector));
         multisig.proposeInitialization("@salva", address(registry));
 
+        //
         vm.expectRevert(abi.encodeWithSelector(Errors.Errors__Validator_Update_Proposed.selector));
         multisig.proposeValidatorUpdate(owner, false);
     }
