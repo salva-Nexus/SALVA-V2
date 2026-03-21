@@ -1,23 +1,71 @@
 <div align="center">
-  <h1>🛡️ Salva </h1>
+  <h1>🛡️ Salva V2 </h1>
   <p><b>On-Chain Payment Infrastructure for the Next Billion</b></p>
   
   <img src="https://img.shields.io/badge/Network-Base-blue?style=for-the-badge&logo=base" />
   <img src="https://img.shields.io/badge/Stack-Solidity_|_Assembly/Yul-61DAFB?style=for-the-badge&logo=react" />
 </div>
 
-## Why Salva?
+# 🛡️ Salva V2
 
-Salva lets you link account numbers (like `5265733930`) to wallet addresses (`0x123...`). Each registry gets its own isolated namespace, so multiple applications can use the same Salva Singleton without interfering with each other.
+In the traditional world, you send money using a **Phone Number** or a **Name**. In crypto, you have to use long, confusing addresses like `0x71C...`.
 
-## Features
+**Salva** bridges this gap. It allows any application (like a bank, a wallet, or a payment app) to create its own private directory where users can link their real-world identity to their digital wallet—safely, permanently, and with zero room for impersonation.
 
-- **Gas optimized** — Custom storage layout
-- **Namespace isolation** — Your registry's mappings are completely separate from everyone else's
-- **One-to-one enforcement** — Numbers and addresses can only be linked once (no reassignment)
-- **Minimal overhead** — Assembly-based calls skip Solidity's ABI encoding overhead
+### Key Benefits
 
-## Installation
+- **Phishing Protection:** Scammers can't trick you by using capital letters (e.g., `Charles` vs `charles`). Salva sees them as the same person.
+- **One Person, One Name:** You can't "squat" on multiple names within the same app.
+- **Extreme Speed:** Built using advanced "Assembly" logic, making it one of the fastest and cheapest tools on the Base network.
+
+---
+
+## 🗺️ How it Works (The Flow)
+
+Salva is structured like a secure vault. Before a user can get a name, the "Owner" of that namespace must be verified by a group of guardians (Validators).
+
+### 1. The Guardians (MultiSig)
+
+A group of trusted Validators must agree to open a new "Registry."
+
+- **The Rule:** No one can just claim a brand name like `@coinbase` or `@metamask` without thorough verification.
+- **The Safety:** Every major change has a **24-hour waiting period** to prevent rush decisions.
+
+### 2. The App Gateways (Registries)
+
+Each app (like a Payment App) gets its own isolated "Registry."
+A Registry like - @salva, @coinbase, @uniswap, etc
+
+- Think of this as a private phonebook.
+- What happens in the "App A" phonebook doesn't affect "App B."
+
+### 3. The Users
+
+Once an app is live, users can link their details:
+
+**Link a Name:**
+
+SALVA WALLET: `alice` → `0x123...` - alice now owns alice@salva pointing to her Salva Wallet Address
+
+COINBASE: `alice` → `0x456...` - alice now owns alice@coinbase pointing to her coinbase Wallet Address
+
+UNISWAP: `alice` → `0x789...` - alice now owns alice@uniswap pointing to her uniswap Wallet Address
+
+**Link a Number:** 
+
+SALVA WALLET: `5265733930` → `0x123...` - alice now owns 5265733930 pointing to her Salva Wallet Address
+
+Numbers don't use the namespace raw, but they are still isolated per namespace techinically.
+
+And so on..
+
+**NOTE:** alice@salva and alice@coinbase are different identities, made unique by there namespaces - @walletname
+
+---
+
+## 🛠️ Developer Integration
+
+### Installation
 
 ```bash
 git clone --recursive https://github.com/salva-Nexus/SALVA-V2.git
@@ -26,66 +74,12 @@ forge install
 forge build
 ```
 
-## Integration
-
-### Singleton Address
-
-**Base Mainnet:** `<SINGLETON_ADDRESS_HERE>`  
-**Base Testnet:** `0x679816DA395418c2c72BAD63652badC10Fe78A68`
-
-The Singleton is already deployed. Just use the address above.
-
-### Build your registry
-
-```solidity
-import {BaseRegistry} from "./BaseRegistry.sol";
-
-contract MyRegistry is BaseRegistry {
-    bytes32 public myNamespace;
-
-    constructor(address singleton) BaseRegistry(singleton) {
-        myNamespace = SINGLETON.initializeRegistry();
-    }
-
-    function link(uint128 number, address wallet) external {
-        _linkNumber(number, wallet);
-    }
-
-    // Required view functions
-    function resolveAddress(uint128 num, address registry) external view override returns (address) {
-        return SINGLETON.resolveAddress(num, registry);
-    }
-
-    function resolveNumber(address addr, address registry) external view override returns (uint128) {
-        return SINGLETON.resolveNumber(addr, registry);
-    }
-
-    function namespace(address registry) external view override returns (bytes32) {
-        return SINGLETON.namespace(registry);
-    }
-}
-```
-
-### Deploy
-
-```solidity
-MyRegistry registry = new MyRegistry(SINGLETON_ADDRESS);
-```
-
-### Use it
-
-```solidity
-registry.link(1234567890, 0xYourWalletAddress);
-address wallet = registry.resolveAddress(1234567890, address(registry));
-```
-
-## Testing
+### Testing
 
 ```bash
 forge test
-forge test -vvv  # verbose
 ```
 
-## License
+## ⚖️ License
 
-MIT
+Distributed under the MIT License. See `LICENSE` for more information.
