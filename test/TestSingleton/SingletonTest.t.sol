@@ -81,8 +81,11 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         SalvaRegistry reg = new SalvaRegistry(address(singleton), owner);
 
         multisig.proposeInitialization(IDENTIFIER, address(reg));
-        vm.expectRevert();
         multisig.validateRegistry(address(reg));
+
+        vm.warp(block.timestamp + 48 hours);
+        vm.expectRevert();
+        multisig.executeInit(address(reg));
     }
 
     function test_Only_Registry_Can_Link() external initialized {
