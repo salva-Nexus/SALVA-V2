@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {Script} from "forge-std/Script.sol";
 import {Singleton} from "@Singleton/Singleton.sol";
 import {MultiSig} from "@MultiSig/MultiSig.sol";
-import {SalvaRegistry} from "../src/SalvaRegistry/Registry.sol";
+import {SalvaRegistry} from "@SalvaRegistry/Registry.sol";
 import {console} from "forge-std/Test.sol";
 
 contract DeploySingleton is Script {

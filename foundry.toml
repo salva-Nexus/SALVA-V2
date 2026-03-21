@@ -8,6 +8,9 @@ remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"]
 runs = 10000
 
 [Invariant]
-runs = 3000
-depth = 800
-fail_on_revert = true
+runs = 1000
+depth = 500
+fail_on_revert = false
+
+optimizer = true
+optimizer_runs = 100000

@@ -8,7 +8,10 @@
 @LinkName/=src/SalvaModules/Aliases/NameAlias
 @UnlinkNumber/=src/SalvaModules/Aliases/NumberAlias
 @UnlinkName/=src/SalvaModules/Aliases/NameAlias
-@Errors/=src/SalvaMultiSig
+@Errors/=src/SalvaModules
 @MultiSigStorage/=src/SalvaMultiSig
 @MultiSigModifier/=src/SalvaMultiSig/
 @MultiSig/=src/SalvaMultiSig/
+@BaseTest/=test/TestSingleton/
+@SalvaRegistry/=src/SalvaRegistry/
+@TestMultiSig/=test/TestMultiSig/

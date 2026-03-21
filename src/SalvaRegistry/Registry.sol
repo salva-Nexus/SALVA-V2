@@ -36,7 +36,7 @@ contract SalvaRegistry is AccessControl {
         return SINGLETON.resolveAddressViaName(_name);
     }
 
-    function namespace(address _registry) external view returns (bytes32) {
+    function namespace(address _registry) external view returns (bytes32, bool) {
         return SINGLETON.namespace(_registry);
     }
 }

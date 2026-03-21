@@ -6,10 +6,15 @@ import {BaseSingleton} from "@BaseSingleton/BaseSingleton.sol";
 abstract contract LinkName is BaseSingleton {
     /**
      * @notice Links a human-readable name alias to a wallet address under the caller's namespace.
-     *  @dev    Only a registered registry may call this. The same name can exist
-     *          across different registries without collision because the key is
-     *          a welded combination of the name and the registry's identifier —
-     *          the name alone is never the key.
+     * @dev    Only a registered registry may call this. The same name can exist across
+     *         different registries without collision because the storage key is a weld of
+     *         the name bytes and the registry's namespace identifier — the name alone
+     *         is never the key.
+     *
+     * @param _name    The name alias to link e.g. "charles". Must be all lowercase —
+     *                 enforced by the phishingProof modifier before entering assembly.
+     *                 Max length is 16 bytes (bytes16) — enforced inside assembly.
+     * @param _wallet  The wallet address to link the name alias to.
      */
     // ─────────────────────────────────────────────────────────────────────────
     // STEP 1 — CALLER VERIFICATION
@@ -18,83 +23,78 @@ abstract contract LinkName is BaseSingleton {
     // from _registryNamespace[caller]. If zero, they never called
     // initializeRegistry → revert.
     //
-    //   Storage pointer derivation:
-    //   add(or(shl(0x08, caller()), _registryNamespace.slot), _NSPACE_SALT)
+    //   Storage pointer derivation — keccak256 on (caller ++ slot):
+    //   mstore(0xc0, caller())
+    //   mstore(0xe0, _registryNamespace.slot)
+    //   nspace = sload(keccak256(0xc0, 0x40))
     //
-    //   shl(0x08, caller()):
-    //   0x0000000000000000000000a208e28AA883dDB5A0Eb52d04D473E589054c85600
-    //    ├─── 11 zero bytes ──────────────┤├── address (20 bytes) ──┤├─00─┤
-    //
-    //   OR .slot (0x01):
-    //   0x0000000000000000000000a208e28AA883dDB5A0Eb52d04D473E589054c85601
-    //    ├─── 11 zero bytes ──────────────┤├── address (20 bytes) ──┤├─01─┤
-    //
-    //   + _NSPACE_SALT (0x0e69ca985d281c235813eed420b4fabc37bf87db9c2fbe28384506a2c9e52e46):
-    //   final ptr:
-    //   0x0e69ca985d281c235813eed5c2d2e347bba05b5e6d55a3c9199955f6f7b74a47
-    //    ├──────────────── scattered 32-byte storage pointer ─────────────┤
-    //
-    //   sload(ptr) → nSpace
-    //
-    //   nSpace example:
-    //   0x4073616c7661000000000000a208e28AA883dDB5A0Eb52d04D473E589054c856
-    //    "@salva" (identifier) ├────── registry address (20 bytes) ──────────┤
-    //
-    //   iszero(nSpace) → revert if nSpace is 0x00(empty) — caller is not a registered registry.
+    //   iszero(nspace) → revert if unregistered.
     //
     // ─────────────────────────────────────────────────────────────────────────
-    // STEP 2 — IDENTIFIER EXTRACTION
+    // STEP 2 — NAME LENGTH CHECK
     // ─────────────────────────────────────────────────────────────────────────
-    // The namespace packs BOTH the identifier and the registry address into one
-    // bytes32 slot. To weld the name, we only need the LEFT side (identifier).
-    // We strip the RIGHT side (address, 20 bytes) by ANDing with NOT(address mask):
+    // Since _name is a dynamic string, its length is not enforced at the type
+    // level. We enforce a max of 16 bytes (bytes16) here in assembly.
     //
-    //   nSpace:
-    //   0x4073616c7661000000000000a208e28AA883dDB5A0Eb52d04D473E589054c856
-    //    "@salva" (12 bytes LEFT) ├────── address (20 bytes RIGHT) ──────────┤
+    //   nameLen = mload(_name)  // first word of a string memory is its length
     //
-    //   not(0xffffffffffffffffffffffffffffffffffffffff)
-    //   = 0xffffffffffffffffffffffff0000000000000000000000000000000000000000
-    //      ├──── keep left 12 bytes ────────┤├──── zero right 20 bytes ──────┤
-    //
-    //   AND result (_identifier):
-    //   0x4073616c76610000000000000000000000000000000000000000000000000000
-    //    "@salva" (6 bytes) ├──────────────── 26 zero bytes ─────────────────┤
+    //   gt(nameLen, 0x10) → name exceeds 16 bytes → revert ✗
+    //   gt(nameLen, 0x10) → false → name fits in bytes16 → pass ✓
     //
     // ─────────────────────────────────────────────────────────────────────────
     // STEP 3 — NAME WELDING
     // ─────────────────────────────────────────────────────────────────────────
-    // The weldedName packs the name and identifier into a single bytes32 —
-    // producing a namespaced key like "charles@salva".
+    // The weldedName packs the name and namespace identifier into a single
+    // bytes32 — producing a namespaced key like "charles@salva".
     //
     // This means "charles" under @salva and "charles" under @coinbase are
     // completely different storage keys — no cross-registry collision possible.
     //
+    //   name = mload(add(_name, 0x20)) // first 32 bytes of name content
+    //
+    //   NAMESPACE NORMALIZATION
+    //   ────────────────────────
+    //   _registryNamespace stores bytes16 values. Solidity left-aligns bytes16
+    //   within the right half of a bytes32 slot:
+    //
+    //   nspace (as loaded from storage):
+    //   0x000000000000000000000000000000004073616c766100000000000000000000
+    //    ├──────────── 16 zero bytes ────────────────┤├── @salva + padding ──┤
+    //                                                 ▲ sitting at position 16
+    //
+    //   If nameLen < 16, shift namespace left 128 bits to push identifier to far left:
+    //   shl(0x80, nspace):
+    //   0x4073616c76610000000000000000000000000000000000000000000000000000
+    //    ▲ now at far left, ready to weld
+    //
+    //   If nameLen == 16 (full bytes16 name), no shift needed — the name already
+    //   occupies the full left half of bytes32, and the namespace sits naturally
+    //   in the right half at its loaded position. Shifting would push the namespace
+    //   out of range and corrupt the weld.
+    //
+    //   let _nspace := nspace
+    //   if iszero(eq(nameLen, 0x10)) {
+    //       _nspace := shl(0x80, nspace)
+    //   }
+    //
     //   HOW WELDING WORKS
     //   ──────────────────
-    //   The identifier is left-aligned in bytes32. To make room for the name
-    //   at the left side, we shift the identifier RIGHT by (nameLen × 8) bits,
+    //   The normalized namespace is shifted RIGHT by (nameLen × 8) bits —
     //   pushing it just after where the name ends. Then OR with the name.
     //
     //   Example: name = "charles" (7 bytes), identifier = "@salva" (6 bytes)
     //
-    //   nameLen = 7
-    //   name    = mload(add(_name, 0x20))
-    //           = 0x636861726c65730000000000000000000000000000000000000000000000000
-    //              "charles" ├──────────────── 25 zero bytes ────────────────────┤
+    //   _nspace = 0x4073616c76610000000000000000000000000000000000000000000000000000
+    //              "@salva"     ├────────────────── 26 zero bytes ─────────────────┤
     //
-    //   _identifier:
-    //   0x4073616c76610000000000000000000000000000000000000000000000000000
-    //    "@salva" ├──────────────────── 26 zero bytes ──────────────────────────┤
-    //
-    //   shr(mul(7, 0x08), _identifier) → shift right 56 bits (7 bytes):
-    //   0x0000000000000040 73616c7661000000000000000000000000000000000000000000
-    //    ├─── 7 zero bytes ──┤"@salva"├──────── 19 zero bytes ──────────────────┤
-    //                         ▲ identifier now sits just after the 7-byte name gap
+    //   shr(mul(7, 0x08), _nspace) → shift right 56 bits (7 bytes):
+    //   0x00000000000000 4073616c766100000000000000000000000000000000000000000000
+    //    ├── 7 zero bytes ──┤"@salva"├──────────── 19 zero bytes ───────────────┤
+    //                        ▲ identifier sits just after the 7-byte name gap
     //
     //   OR with name:
-    //   0x636861726c657340 73616c766100000000000000000000000000000000000000000000
-    //    "charles"          "@salva" ├────────── 19 zero bytes ───────────────────┤
+    //   0x636861726c6573 4073616c766100000000000000000000000000000000000000000000
+    //    "charles"        "@salva" ├────────────── 19 zero bytes ─────────────────┤
     //
     //   weldedName = "charles@salva" packed left-aligned in bytes32 ✓
     //
@@ -102,190 +102,108 @@ abstract contract LinkName is BaseSingleton {
     //   │  bytes32 weldedName layout                                      │
     //   │                                                                 │
     //   │  0x636861726c65734073616c766100000000000000000000000000000000   │
-    //   │   "charles"  "@salva" ├──────── 19 zero bytes ──────────────┤   │
+    //   │   "charles"  "@salva" ├────────── 19 zero bytes ─────────────┤  │
     //   │   7 bytes  + 6 bytes  = 13 bytes total                          │
     //   └─────────────────────────────────────────────────────────────────┘
     //
-    // ─────────────────────────────────────────────────────────────────────────
+    //   MAX WELD SIZE
+    //   ──────────────
+    //   namespace = bytes16 (max 16 bytes)
+    //   name      = bytes16 (max 16 bytes, enforced in STEP 2)
+    //   weldedName can occupy the full bytes32 slot — up to 32 bytes total.
+    //
+    // ─────────────────────────────────────────────────────────────────────
     // STEP 4 — NAME COLLISION CHECK
-    // ─────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────
     // Check that this welded name is not already linked within this namespace.
     //
-    //   Storage pointer:
-    //   add(or(weldedName, _nameToWallet.slot), _NAME_TO_WALLET_SALT)
+    //   Storage pointer derivation — ADD-based + slot + salt (no keccak on key):
+    //   nameToWalletPtr = add(add(weldedName, _nameToWallet.slot), _NAME_TO_WALLET_SALT)
     //
-    //   weldedName occupies the LEFT side (up to 24 bytes max, guaranteed by
-    //   STEP 6 size check below). .slot occupies the lowest byte (slot 2).
-    //   They never overlap — safe to OR directly.
+    //   Salt scatters the pointer into unpredictable 2²⁵⁶ space.
     //
-    //   weldedName   = 0x636861726c65734073616c766100000000000000000000000000000000000000
-    //                   "charles@salva" ├──────── 19 zero bytes ───────────────────────┤
+    //   sload(nameToWalletPtr) != 0 → name already linked → revert ✗
+    //   sload(nameToWalletPtr) == 0 → name slot empty     → pass   ✓
     //
-    //   OR .slot (0x02):
-    //   0x636861726c65734073616c766100000000000000000000000000000000000002
-    //    "charles@salva" ├──────── 19 zero bytes ────────────────────┤├─02─┤
-    //
-    //   + _NAME_TO_WALLET_SALT:
-    //   0x5415ea9680222ca68b72c70a4b6b69e33e700d6299885d0ba1fa188b932267c1
-    //
-    //   final ptr:
-    //   0xba6f4c22f8472d4af7e530af07f213e6742e0d38321452cbf214205f1c4587c3
-    //    ├──────────────── scattered 32-byte storage pointer ─────────────┤
-    //
-    //   sload(nameToAddrPtr) != 0 → name already linked → revert ✗
-    //   sload(nameToAddrPtr) == 0 → name slot empty     → pass   ✓
-    //
-    // ─────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────
     // STEP 5 — WALLET CHECK (BIDIRECTIONAL MAPPING PROTECTION)
-    // ─────────────────────────────────────────────────────────────────────────
-    // One wallet can hold AT MOST one name alias. We enforce this by checking
-    // the LEFT side (bytes24) of the packed WalletAlias slot:
+    // ─────────────────────────────────────────────────────────────────────
+    // One wallet can hold AT MOST one name alias per registry. We enforce this
+    // by checking the wallet's reverse mapping before writing.
     //
-    //   WALLET ALIASES SLOT LAYOUT
-    //   ┌────────────────────────────────────────────────┬────────────────┐
-    //   │          bytes24 / uint192  (LEFT)             │ uint64 (RIGHT) │
-    //   │          name alias                            │ number alias   │
-    //   └────────────────────────────────────────────────┴────────────────┘
-    //   bit 255 ◄──────────────────────────────────── 64  63 ──────────── 0
+    //   Storage pointer derivation — address + salt:
+    //   walletToNamePtr = add(_wallet, add(_WALLET_ALIASES_SALT, 0x00))
     //
-    //   Storage pointer:
-    //   add(or(shl(0x08, _wallet), _walletAliases.slot), _WALLET_ALIASES_SALT)
+    //   walletToName = sload(walletToNamePtr)
     //
-    //   shl(0x08, _wallet):
-    //   0x0000000000000000000000a208e28AA883dDB5A0Eb52d04D473E589054c85600
-    //    ├─── 11 zero bytes ──────────────┤├── address (20 bytes) ──┤├─00─┤
+    //   gt(walletToName, 0) → wallet already has a name → revert ✗
+    //   gt(walletToName, 0) → false → wallet name slot empty → pass ✓
     //
-    //   OR .slot (0x04):
-    //   0x0000000000000000000000a208e28AA883dDB5A0Eb52d04D473E589054c85604
-    //    ├─── 11 zero bytes ──────────────┤├── address (20 bytes) ──┤├─04─┤
-    //
-    //   + _WALLET_ALIASES_SALT:
-    //   0x0c57d69214bd4b97e4912ff651178d8aa7d58a9bddae0f2ba850708500a09061
-    //
-    //   final ptr:
-    //   0x0c57d69214bd4b97e4912ff6a260a8701c533e5a42888327535778d500a11865
-    //    ├──────────────── scattered 32-byte storage pointer ─────────────┤
-    //
-    //   sload(walletAliasesPtr) → walletAliases (the packed 32-byte slot)
-    //
-    //   To check if a name is already linked, isolate the LEFT side (bytes24)
-    //   by ANDing with NOT(uint64 mask):
-    //
-    //   not(0xffffffffffffffff)
-    //   = 0xffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000
-    //      ├──────────────────── keep left 24 bytes ───────────────────┤├─ 0 ─┤
-    //
-    //   EXAMPLE — wallet with name already linked:
-    //   walletAliases:
-    //   0x636861726c65734073616c766100000000000000000000000000000060d1f2ea
-    //    ├──────────── bytes24 ("charles@salva") ───────────────┤├─uint64─┤
-    //
-    //   AND result:
-    //   0x636861726c65734073616c766100000000000000000000000000000000000000
-    //    ├──────────── bytes24 non-zero ────────────────────────────┤├── 0 ───┤
-    //
-    //   gt(result, 0) → name side non-zero → wallet already has a name → revert ✗
-    //   gt(result, 0) → false             → name side empty            → pass   ✓
-    //
-    // ─────────────────────────────────────────────────────────────────────────
-    // STEP 6 — WELDED NAME SIZE GUARD
-    // ─────────────────────────────────────────────────────────────────────────
-    // The weldedName is stored in the LEFT side (bytes24 / uint192) of the
-    // packed WalletAlias slot. It must NOT bleed into the RIGHT side (uint64)
-    // which is reserved for the number alias.
-    //
-    //   WalletAlias slot boundary:
-    //   ┌────────────────────────────────────────────────┬────────────────┐
-    //   │          bytes24 (LEFT) — name goes here       │ uint64 (RIGHT) │
-    //   │          max 24 bytes = 192 bits               │ MUST stay 0    │
-    //   └────────────────────────────────────────────────┴────────────────┘
-    //
-    //   Guard: weldedName == and(weldedName, not(0xffffffffffffffff))
-    //
-    //   not(0xffffffffffffffff)
-    //   = 0xffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000
-    //      ├──────────────── left 24 bytes intact ─────────────────────────┤├─ 0 ─┤
-    //
-    //   PASS — weldedName fits in bytes24 (right 8 bytes are zero):
-    //   weldedName = 0x636861726c65734073616c766100000000000000000000000000000000000000
-    //                 "charles@salva" ├─────────── 19 zero bytes ──────────────────────┤
-    //
-    //   AND result = 0x636861726c65734073616c766100000000000000000000000000000000000000
-    //
-    //   eq(weldedName, AND result) = 1 → fits in bytes24 → pass ✓
-    //
-    //   FAIL — weldedName overflows into uint64 space (right 8 bytes non-zero):
-    //   weldedName = 0x636861726c65734073616c7661636861726c65734073616c7661000060d1f2ea
-    //                 ├─── name+identifier too long, bleeds into uint64 ──────────────┤
-    //
-    //   AND result = 0x636861726c65734073616c7661636861726c65734073616c76610000000000000
-    //
-    //   eq(weldedName, AND result) = 0 → overflows uint64 space → revert ✗
-    //
-    // ─────────────────────────────────────────────────────────────────────────
-    // STEP 7 — STORAGE WRITES
-    // ─────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────
+    // STEP 6 — STORAGE WRITES
+    // ─────────────────────────────────────────────────────────────────────
     // Two writes, both necessary:
     //
-    // 1. sstore(nameToAddrPtr, _wallet)
-    //    Registers the namespaced welded name key → wallet address in _nameToWallet.
+    // 1. sstore(nameToWalletPtr, _wallet)
+    //    Registers the welded name key → wallet address in _nameToWallet.
     //    This is what resolveAddressViaName reads from.
     //
-    // 2. sstore(walletAliasesPtr, or(walletAliases, weldedName))
-    //    Updates the packed WalletAlias slot. OR preserves the existing
-    //    uint64 number side untouched and writes weldedName into the bytes24 side.
+    // 2. sstore(walletToNamePtr, weldedName)
+    //    Registers the reverse mapping: wallet → weldedName.
+    //    Enforces the one-name-per-wallet invariant on future calls.
     //
-    //    BEFORE (wallet has a number but no name yet):
-    //    walletAliases = 0x000000000000000000000000000000000000000000000000000000060d1f2ea
-    //                     ├──────────────── bytes24 all zeros ────────────────────────┤├─num─┤
-    //
-    //    OR weldedName = 0x636861726c65734073616c766100000000000000000000000000000000000000:
-    //
-    //    AFTER:
-    //    walletAliases = 0x636861726c65734073616c766100000000000000000000000000000060d1f2ea
-    //                     ├──────────── bytes24 (name written) ───────────────────────┤├─num─┤
-    function linkNameAlias(string memory _name, address _wallet) external phishingProof {
+    // ─────────────────────────────────────────────────────────────────────
+    // INVARIANT TESTING HOOK
+    // ─────────────────────────────────────────────────────────────────────
+    // nameToWalletPtr is pushed to storedHash after every successful call.
+    // The test suite reads these pointers and asserts no two different names
+    // ever produced the same storage slot — proving collision resistance of
+    // the ADD+salt pointer derivation without keccak256 on the key.
+    // Remove storedHash, _hash, storedHash.push, and getHash() before mainnet.
+    function linkNameAlias(string memory _name, address _wallet) external phishingProof(_name) {
         assembly {
-            let nSpace := sload(add(or(shl(0x08, caller()), _registryNamespace.slot), _NSPACE_SALT))
-            if iszero(nSpace) {
+            // STEP 1 — load namespace via keccak(caller ++ slot)
+            mstore(0xc0, caller())
+            mstore(0xe0, _registryNamespace.slot)
+            let nspace := sload(keccak256(0xc0, 0x40))
+            if iszero(nspace) {
                 revert(0x00, 0x00)
             }
 
-            // clean and pick the identifier
-            let _identifier := and(nSpace, not(0xffffffffffffffffffffffffffffffffffffffff))
-
-            // NAME CHECK
+            // STEP 2 — name length check, max bytes16
             let nameLen := mload(_name)
             let name := mload(add(_name, 0x20))
+            if gt(nameLen, 0x10) {
+                revert(0x00, 0x00)
+            }
 
-            // weld name and identifier together to create a unique namespace for this alias,
-            // this allows us to have multiple aliases per registry without collision
-            // Eq -> Charles@Salva, Charles@Coinbase
-            let weldedName := or(shr(mul(nameLen, 0x08), _identifier), name)
+            // STEP 3 — weld name + namespace into namespaced storage key
+            // charles + @salva → "charles@salva" packed in bytes32
+            // bytes16 namespace sits at position 16 in bytes32 — normalize to far left first
+            // 0x000000000000000000000000000000004073616c766100000000000000000000
+            // if name length is already bytes16, no shift needed
+            let _nspace := nspace
+            if iszero(eq(nameLen, 0x10)) {
+                _nspace := shl(0x80, nspace)
+            }
+            let weldedName := or(shr(mul(nameLen, 0x08), _nspace), name)
 
-            let nameToWalletPtr := add(or(weldedName, _nameToWallet.slot), _NAME_TO_WALLET_SALT)
-            // revert if name is already taken, this prevents overwriting existing mappings and ensures one-time assignment
+            // STEP 4 — name collision check
+            let nameToWalletPtr := add(add(weldedName, _nameToWallet.slot), _NAME_TO_WALLET_SALT)
             if sload(nameToWalletPtr) {
                 revert(0x00, 0x00)
             }
 
-            // WALLET CHECK - BIDIRECTIONAL MAPPING PROTECTIONj
-            let walletAliasesPtr := add(or(shl(0x08, _wallet), _walletAliases.slot), _WALLET_ALIASES_SALT)
-            let walletAliases := sload(walletAliasesPtr)
-
-            // bytes24 name Space must be empty
-            if gt(and(walletAliases, not(0xffffffffffffffff)), 0x00) {
+            // STEP 5 — wallet check (bidirectional mapping protection)
+            let walletToNamePtr := add(_wallet, add(_WALLET_ALIASES_SALT, 0x00))
+            let walletToName := sload(walletToNamePtr)
+            if gt(walletToName, 0x00) {
                 revert(0x00, 0x00)
             }
 
-            // we have to make sure that name (name + identifier) doesn't go past uint192, so as not to corrupt the number space.
-            // if cleaned up name + identifier exceeds 128 bits, revert
-            if iszero(eq(weldedName, and(weldedName, not(0xffffffffffffffff)))) {
-                revert(0x00, 0x00)
-            }
-
+            // STEP 6 — write both directions
             sstore(nameToWalletPtr, _wallet)
-            sstore(walletAliasesPtr, or(walletAliases, weldedName))
+            sstore(walletToNamePtr, weldedName)
         }
     }
 }

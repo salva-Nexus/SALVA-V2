@@ -12,4 +12,15 @@ abstract contract MultiSigModifier is Errors {
         }
         _;
     }
+
+    modifier enforceBit128(string memory _nspace) {
+        assembly {
+            let nspace := mload(add(_nspace, 0x20))
+            let cleaned := and(nspace, not(0xffffffffffffffffffffffffffffffff))
+            if iszero(eq(cleaned, nspace)) {
+                revert(0x00, 0x00)
+            }
+        }
+        _;
+    }
 }
