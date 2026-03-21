@@ -60,7 +60,6 @@ abstract contract TestMultiSig is BaseTest {
         vm.warp(block.timestamp + 48 hours);
         multisig.executeUpdateValidator(makeAddr("val3"));
 
-
         // Now another validator validates
         multisig.updateValidator(makeAddr("val3"));
 
@@ -71,6 +70,5 @@ abstract contract TestMultiSig is BaseTest {
         // now enough time has paseed
         vm.warp(block.timestamp + 48 hours);
         multisig.executeUpdateValidator(makeAddr("val3"));
-
     }
 }

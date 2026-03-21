@@ -9,11 +9,10 @@ import {Singleton} from "@Singleton/Singleton.sol";
  * @title Salva MultiSig
  * @author cboi@Salva
  * @notice Administrative multisig with a 24-hour security timelock for all sensitive actions.
- * @dev Proposals require a majority quorum. Once quorum is reached, a 24-hour delay is enforced 
+ * @dev Proposals require a majority quorum. Once quorum is reached, a 24-hour delay is enforced
  * before executeInit or executeUpdateValidator can be called.
  */
 contract MultiSig is MultiSigStorage, MultiSigModifier {
-    
     /**
      * @notice Initializes the contract with the deployer as the first validator.
      */
@@ -46,7 +45,7 @@ contract MultiSig is MultiSigStorage, MultiSigModifier {
     {
         Registry storage reg = _registry[registry];
         if (reg.isProposed || reg.isExecuted) revert Errors__Registry_Init_Proposed();
-        
+
         reg.registryAddress = registry;
         reg.nspace = bytes16(bytes(_nspace));
         reg.requiredValidationCount = uint128((_num_Of_Validators - 1) / 2) + 1;
