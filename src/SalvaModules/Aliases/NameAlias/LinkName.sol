@@ -69,8 +69,7 @@ abstract contract LinkName is BaseSingleton {
     //
     //   If nameLen == 16 (full bytes16 name), no shift needed — the name already
     //   occupies the full left half of bytes32, and the namespace sits naturally
-    //   in the right half at its loaded position. Shifting would push the namespace
-    //   out of range and corrupt the weld.
+    //   in the right half at its loaded position.
     //
     //   let _nspace := nspace
     //   if iszero(eq(nameLen, 0x10)) {
