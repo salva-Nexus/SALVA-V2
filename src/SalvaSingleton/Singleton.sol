@@ -17,7 +17,7 @@ import {UnlinkName} from "@UnlinkName/UnlinkName.sol";
 //
 //         INHERITANCE STRUCTURE
 //         ──────────────────────
-//         BaseSingleton (Storage + Salt + Errors + Modifier)
+//         BaseSingleton (Storage + Errors + Modifier)
 //              ↑
 //         Initialize · LinkNumber · LinkName · UnlinkNumber · UnlinkName
 //              ↑
