@@ -5,7 +5,6 @@ import {Errors} from "@Errors/Errors.sol";
 import {Context} from "@Context/Context.sol";
 
 abstract contract Modifier is Errors, Context {
-
     // Validates the name string before linkNameAlias executes.
     // Rules enforced (bounded loop, max 16 iterations since name max is bytes16):
     //   - Only lowercase letters a–z  (0x61–0x7a)

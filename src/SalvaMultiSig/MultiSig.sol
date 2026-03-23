@@ -33,7 +33,6 @@ import {Context} from "@Context/Context.sol";
 //         propose → validate (repeat until quorum) → 24h timelock → execute
 //         Once executed, isExecuted is permanent — no re-execution possible.
 contract MultiSig is MultiSigStorage, MultiSigModifier, Context {
-
     // Sets the deployer as the first validator with a count of 1.
     // Singleton address is set separately via setSingleton() after deployment
     // to avoid circular deployment dependency.
@@ -59,10 +58,10 @@ contract MultiSig is MultiSigStorage, MultiSigModifier, Context {
     // Only one active proposal per registry address at a time.
     // enforceBit128 modifier ensures the namespace fits within bytes16.
     /**
-    *  @param _nspace   The namespace identifier e.g. "@coinbase". Must start with '@'.
-    *  @param registry  The registry contract address to initialize.
-    * @return          The identifier as passed in and true on success.
-    */
+     *  @param _nspace   The namespace identifier e.g. "@coinbase". Must start with '@'.
+     *  @param registry  The registry contract address to initialize.
+     * @return          The identifier as passed in and true on success.
+     */
     function proposeInitialization(string memory _nspace, address registry)
         external
         onlyValidators(_isValidator[sender()])
@@ -83,11 +82,11 @@ contract MultiSig is MultiSigStorage, MultiSigModifier, Context {
 
     // Proposes an update to the validator set — adding or removing a validator.
     // Only one active update proposal per target address at a time.
-    /** 
-    *  @param _addr    The address to add or remove as a validator.
-    *  @param _action  true = add validator, false = remove validator.
-    *  @return bool    Always true on success.
-    */
+    /**
+     *  @param _addr    The address to add or remove as a validator.
+     *  @param _action  true = add validator, false = remove validator.
+     *  @return bool    Always true on success.
+     */
     function proposeValidatorUpdate(address _addr, bool _action)
         external
         onlyValidators(_isValidator[sender()])
@@ -109,9 +108,9 @@ contract MultiSig is MultiSigStorage, MultiSigModifier, Context {
     // is set — executeInit cannot be called until the timelock expires.
     // Each validator may only vote once per proposal.
     /**
-    *  @param registry  The registry contract address whose proposal to validate.
-    *  @return bool     Always true on success.
-    */
+     *  @param registry  The registry contract address whose proposal to validate.
+     *  @return bool     Always true on success.
+     */
     function validateRegistry(address registry) external onlyValidators(_isValidator[sender()]) returns (bool) {
         Registry storage reg = _registry[registry];
         if (!reg.isProposed) revert Errors__Registry_Init_Not_Proposed();
@@ -133,9 +132,9 @@ contract MultiSig is MultiSigStorage, MultiSigModifier, Context {
     // is set — executeUpdateValidator cannot be called until the timelock expires.
     // Each validator may only vote once per proposal.
     /**
-    *  @param _addr  The target address whose validator update proposal to vote on.
-    *  @return bool  Always true on success.
-    */
+     *  @param _addr  The target address whose validator update proposal to vote on.
+     *  @return bool  Always true on success.
+     */
     function updateValidator(address _addr) external onlyValidators(_isValidator[sender()]) returns (bool) {
         ValidatorUpdateRequest storage update = _updateValidator[_addr];
         if (!update.isProposed) revert Errors__Validator_Update_Not_Proposed();
@@ -156,9 +155,9 @@ contract MultiSig is MultiSigStorage, MultiSigModifier, Context {
     // Calls Singleton.initializeRegistry — the namespace is permanently claimed.
     // Sets isExecuted = true. Cannot be called again.
     /**
-    *  @param registry  The address of the validated registry to initialize.
-    *  @return bool     Always true on success.
-    */
+     *  @param registry  The address of the validated registry to initialize.
+     *  @return bool     Always true on success.
+     */
     function executeInit(address registry) external onlyValidators(_isValidator[sender()]) returns (bool) {
         Registry storage reg = _registry[registry];
         if (!reg.isValidated || block.timestamp < reg.timeLock) {
@@ -174,9 +173,9 @@ contract MultiSig is MultiSigStorage, MultiSigModifier, Context {
     // the total validator count accordingly.
     // Sets isExecuted = true. Cannot be called again.
     /**
-    *  @param _addr  The address to finalize adding or removing.
-    * @return bool  Always true on success.
-    */
+     *  @param _addr  The address to finalize adding or removing.
+     * @return bool  Always true on success.
+     */
     function executeUpdateValidator(address _addr) external onlyValidators(_isValidator[sender()]) returns (bool) {
         ValidatorUpdateRequest storage update = _updateValidator[_addr];
         if (!update.isValidated || block.timestamp < update.timeLock) {
@@ -192,10 +191,10 @@ contract MultiSig is MultiSigStorage, MultiSigModifier, Context {
     // Intended for emergency use only when validator keys are compromised.
     // Should NEVER be used for day-to-day operations.
     /**
-    *  @param recovery  The address to add or remove as a recovery address.
-    *  @param _action   true = add, false = remove.
-    *  @return bool     Always true on success.
-    */
+     *  @param recovery  The address to add or remove as a recovery address.
+     *  @param _action   true = add, false = remove.
+     *  @return bool     Always true on success.
+     */
     function updateRecovery(address recovery, bool _action)
         external
         onlyValidators(_isValidator[sender()])

@@ -4,17 +4,16 @@ pragma solidity ^0.8.28;
 import {BaseSingleton} from "@BaseSingleton/BaseSingleton.sol";
 
 abstract contract LinkName is BaseSingleton {
-
     // Links a human-readable name alias to a wallet address under the caller's namespace.
     // Only a registered registry may call this. The same name can exist across different
     // registries without collision because the storage key is a weld of the name bytes
     // and the registry's namespace — the name alone is never the key.
-    /** 
-    *  @param _name    The name alias to link e.g. "charles". Validated by phishingProof —
-    *                 only lowercase letters, digits 2–9, '.', '-', '_' allowed. Max 16 bytes.
-    *  @param _wallet  The wallet address to link the name alias to.
-    *  @return _isLinked  Always true on success.
-    */
+    /**
+     *  @param _name    The name alias to link e.g. "charles". Validated by phishingProof —
+     *                 only lowercase letters, digits 2–9, '.', '-', '_' allowed. Max 16 bytes.
+     *  @param _wallet  The wallet address to link the name alias to.
+     *  @return _isLinked  Always true on success.
+     */
     // ─────────────────────────────────────────────────────────────────────────
     // STEP 1 — CALLER VERIFICATION
     // ─────────────────────────────────────────────────────────────────────────

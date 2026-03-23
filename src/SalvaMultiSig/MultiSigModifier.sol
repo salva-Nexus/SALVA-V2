@@ -4,7 +4,6 @@ pragma solidity ^0.8.28;
 import {Errors} from "@Errors/Errors.sol";
 
 abstract contract MultiSigModifier is Errors {
-
     // Restricts function access to active validators only.
     // Pass _isValidator[sender()] as the argument.
     modifier onlyValidators(bool _isValidator) {

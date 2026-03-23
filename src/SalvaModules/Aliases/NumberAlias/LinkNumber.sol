@@ -4,16 +4,15 @@ pragma solidity ^0.8.28;
 import {BaseSingleton} from "@BaseSingleton/BaseSingleton.sol";
 
 abstract contract LinkNumber is BaseSingleton {
-
     // Links a number alias to a wallet address under the caller's namespace.
     // Only a registered registry may call this. The same number can exist across
     // different registries without collision because the storage key is namespaced —
     // the number alone is never the key.
     /**
-    *  @param _num     The number alias to link (e.g. 1234567890). uint128 — fits in bytes16.
-    *  @param _wallet  The wallet address to link the number alias to.
-    *  @return _isLinked  Always true on success.
-    */
+     *  @param _num     The number alias to link (e.g. 1234567890). uint128 — fits in bytes16.
+     *  @param _wallet  The wallet address to link the number alias to.
+     *  @return _isLinked  Always true on success.
+     */
     // ─────────────────────────────────────────────────────────────────────────
     // STEP 1 — CALLER VERIFICATION
     // ─────────────────────────────────────────────────────────────────────────

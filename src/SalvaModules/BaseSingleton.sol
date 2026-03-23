@@ -5,15 +5,14 @@ import {Modifier} from "@Modifier/Modifier.sol";
 import {Storage} from "@Storage/Storage.sol";
 
 abstract contract BaseSingleton is Modifier, Storage {
-
     // Resolves a 10-digit number alias to a wallet address using only the namespace.
     // No registry contract address needed — namespaces are simple and memorable
     // (e.g. @salva, @coinbase) so callers can resolve directly via namespace.
-    /** 
-    *  @param _num        The number alias to resolve (e.g. 1234567890).
-    *  @param _namespace  The bytes16 namespace to resolve under (e.g. "@salva").
-    *  @return _wallet    The wallet address linked to this number, or address(0) if unlinked.
-    */
+    /**
+     *  @param _num        The number alias to resolve (e.g. 1234567890).
+     *  @param _namespace  The bytes16 namespace to resolve under (e.g. "@salva").
+     *  @return _wallet    The wallet address linked to this number, or address(0) if unlinked.
+     */
     // STORAGE POINTER DERIVATION
     // ───────────────────────────
     // namespace and number each fit within bytes16 — together they fit in bytes32.
@@ -41,10 +40,10 @@ abstract contract BaseSingleton is Modifier, Storage {
     // Resolves a welded name alias to a wallet address.
     // The caller passes the fully welded name (e.g. "charles@salva" packed as bytes32) —
     // the same form that linkNameAlias stores. No registry address needed.
-    /** 
-    *  @param _name    The fully welded name alias as bytes32 (e.g. "charles@salva").
-    *  @return _wallet The wallet address linked to this name, or address(0) if unlinked.
-    */
+    /**
+     *  @param _name    The fully welded name alias as bytes32 (e.g. "charles@salva").
+     *  @return _wallet The wallet address linked to this name, or address(0) if unlinked.
+     */
     function resolveAddressViaName(bytes32 _name) external view returns (address _wallet) {
         // forge-lint: disable-next-line(unsafe-typecast)
         return _nameToWallet[_name];
@@ -54,10 +53,10 @@ abstract contract BaseSingleton is Modifier, Storage {
     // Returns (bytes16(0), false) if the address has never been initialized.
     // Used internally by Initialize, LinkName, LinkNumber, UnlinkName, UnlinkNumber.
     /**
-    *  @param _registry  The registry address to query.
-    *  @return _nspace      The bytes16 namespace assigned to this registry.
-    *  @return _initialized True if this registry has been initialized.
-    */
+     *  @param _registry  The registry address to query.
+     *  @return _nspace      The bytes16 namespace assigned to this registry.
+     *  @return _initialized True if this registry has been initialized.
+     */
     function namespace(address _registry) public view returns (bytes16 _nspace, bool _initialized) {
         bytes16 nspace = _registryNamespace[_registry];
         bool isInitialized = _isInitialized[nspace];

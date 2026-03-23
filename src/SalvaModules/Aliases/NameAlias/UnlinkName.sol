@@ -4,7 +4,6 @@ pragma solidity ^0.8.28;
 import {BaseSingleton} from "@BaseSingleton/BaseSingleton.sol";
 
 abstract contract UnlinkName is BaseSingleton {
-
     // Unlinks a name alias from its wallet address under the caller's namespace.
     // Only a registered registry may call this.
     //
@@ -14,10 +13,10 @@ abstract contract UnlinkName is BaseSingleton {
     //
     // No existence check is performed — if the name is not linked, the call
     // silently zeroes already-zero slots. Caller wastes only their own gas.
-    /** 
-    * @param _name      The name alias to unlink e.g. "charles".
-    * @return _isUnlinked  Always true on success.
-    */
+    /**
+     * @param _name      The name alias to unlink e.g. "charles".
+     * @return _isUnlinked  Always true on success.
+     */
     // ─────────────────────────────────────────────────────────────────────────
     // STEP 1 — CALLER VERIFICATION
     // ─────────────────────────────────────────────────────────────────────────
