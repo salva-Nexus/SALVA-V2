@@ -1,47 +1,49 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.30;
 
-import {Singleton} from "@Singleton/Singleton.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Context} from "@Context/Context.sol";
+import {BaseRegistry} from "@BaseRegistry/BaseRegistry.sol";
 
-contract SalvaRegistry is AccessControl, Context {
+contract SalvaRegistry is BaseRegistry, AccessControl, Context {
     bytes32 private constant REGISTRAR_ROLE = keccak256("REGISTRAR");
-    string private constant IDENTIFIER = "@salva";
-    Singleton private immutable SINGLETON;
 
-    event NumberLinked(uint64 _num, address _wallet);
+    event NumberLinked(uint128 _num, address _wallet);
     event NameLinked(string _name, address _wallet);
 
-    constructor(address _singleton, address _registrar) {
-        SINGLETON = Singleton(_singleton);
+    event NumberUnlinked(uint128 _num);
+    event NameUnlinked(string _name);
+
+    constructor(address _singleton, address _registrar) BaseRegistry(_singleton) {
         _grantRole(DEFAULT_ADMIN_ROLE, sender());
         grantRole(REGISTRAR_ROLE, _registrar);
     }
 
-    function linkNumber(uint64 _num, address _wallet) external onlyRole(REGISTRAR_ROLE) {
+    function linkNumber(uint128 _num, address _wallet) external onlyRole(REGISTRAR_ROLE) returns (bool) {
         emit NumberLinked(_num, _wallet);
-        SINGLETON.linkNumberAlias(_num, _wallet);
+        return _linkAlias("", _num, _wallet);
     }
 
-    function linkName(string memory _name, address _wallet) external onlyRole(REGISTRAR_ROLE) {
+    function linkName(string memory _name, address _wallet) external onlyRole(REGISTRAR_ROLE) returns (bool) {
         emit NameLinked(_name, _wallet);
-        SINGLETON.linkNameAlias(_name, _wallet);
+        return _linkAlias(_name, 0, _wallet);
     }
 
-    function resolveViaNumber(uint64 _num, string memory _namespace) external view returns (address) {
-        // forge-lint: disable-next-line(unsafe-typecast)
-        bytes16 _nspace = bytes16(bytes(_namespace));
-        return SINGLETON.resolveAddressViaNumber(_num, _nspace);
+    function unlinkNumber(uint128 _number) external onlyRole(REGISTRAR_ROLE) returns (bool) {
+        emit NumberUnlinked(_number);
+        return _unlinkAlias("", _number);
     }
 
-    function resolveViaName(string memory _name) external view returns (address) {
-        // forge-lint: disable-next-line(unsafe-typecast)
-        bytes32 name = bytes32(bytes(_name));
-        return SINGLETON.resolveAddressViaName(name);
+    function unlinkName(string memory _name) external onlyRole(REGISTRAR_ROLE) returns (bool) {
+        emit NameUnlinked(_name);
+        return _unlinkAlias(_name, 0);
     }
 
-    function namespace(address _registry) external view returns (bytes32, bool) {
-        return SINGLETON.namespace(_registry);
+    function resolveViaNumber(uint128 _num) external view returns (address) {
+        return _resolveAlias("", _num);
+    }
+
+    function resolveViaName(string calldata _name) external view returns (address) {
+        return _resolveAlias(_name, 0);
     }
 }

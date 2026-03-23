@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.30;
 
 import {MultiSig} from "@MultiSig/MultiSig.sol";
 import {Singleton} from "@Singleton/Singleton.sol";
@@ -13,7 +13,7 @@ abstract contract BaseTest is Test {
     address internal owner;
     address internal registrar;
     address internal EOA;
-    uint64 internal acctNumber;
+    uint128 internal acctNumber;
     string internal name;
 
     modifier initialized() {
@@ -39,9 +39,16 @@ abstract contract BaseTest is Test {
         _stopPrank();
     }
 
-    modifier validatorUpdate() {
+    modifier proposeInit() {
         _changePrank(owner);
-        multisig.proposeValidatorUpdate(owner, false);
+        multisig.proposeInitialization("@coinbase", address(registry));
+        _;
+        _stopPrank();
+    }
+
+    modifier proposeValidatorUpdate() {
+        _changePrank(owner);
+        multisig.proposeValidatorUpdate(makeAddr("val"), true);
         _;
         _stopPrank();
     }

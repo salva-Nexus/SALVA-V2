@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.30;
 
 import {Errors} from "@Errors/Errors.sol";
 import {Context} from "@Context/Context.sol";
@@ -16,14 +16,12 @@ abstract contract Modifier is Errors, Context {
     modifier phishingProof(string memory _name) {
         // forge-lint: disable-next-line(unsafe-typecast)
         bytes32 nameToByte = bytes32(bytes(_name));
-        bytes32 len;
-        assembly {
-            len := mload(_name)
-        }
-        if (uint256(len) > 0x16) {
+        uint256 len = bytes(_name).length;
+
+        if (len > 0x10) {
             revert Errors__Max_Name_Length_Exceeded();
         }
-        for (uint256 i = 0; i < uint256(len);) {
+        for (uint256 i = 0; i < len;) {
             bytes1 char = nameToByte[i];
             if (
                 !(char >= 0x61 && char <= 0x7a) && !(char >= 0x32 && char <= 0x39) && !(char >= 0x2e && char <= 0x2d)

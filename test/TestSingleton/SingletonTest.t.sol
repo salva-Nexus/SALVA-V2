@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.30;
 
 import {BaseTest} from "@BaseTest/BaseTest.t.sol";
 import {DeploySingleton} from "../../script/DeploySingleton.s.sol";
 import {SalvaRegistry} from "@SalvaRegistry/Registry.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {TestMultiSig} from "@TestMultiSig/TestMultiSig.t.sol";
+import {Errors} from "@Errors/Errors.sol";
 
 contract TestSingleton is Test, BaseTest, TestMultiSig {
     function setUp() external {
@@ -21,7 +22,7 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
     }
 
     function test_Initialize() external initialized {
-        (bytes32 s,) = registry.namespace(address(registry));
+        (bytes32 s,) = singleton.namespace(address(registry));
         assertNotEq(s, bytes32(0));
     }
 
@@ -36,18 +37,18 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         uint256 gasStop = gasleft();
 
         console.log("Low Leve Link Number Call: ", gasStart - gasStop);
-        address _wallet = registry.resolveViaNumber(acctNumber, "@salva");
+        address _wallet = registry.resolveViaNumber(acctNumber);
         console.log(_wallet);
         assertEq(_wallet, EOA);
     }
 
-    function test_Unlink_number() external initialized linkNumber prank(address(registry)) {
-        address linked = registry.resolveViaNumber(acctNumber, "@salva");
+    function test_Unlink_number() external initialized linkNumber {
+        address linked = registry.resolveViaNumber(acctNumber);
         assertEq(linked, EOA);
 
-        singleton.unlinkNumber(acctNumber);
+        registry.unlinkNumber(acctNumber);
 
-        assertNotEq(registry.resolveViaNumber(acctNumber, "@salva"), linked);
+        assertNotEq(registry.resolveViaNumber(acctNumber), linked);
     }
 
     function test_linkName() external initialized {
@@ -61,11 +62,11 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         assertEq(_wallet, EOA);
     }
 
-    function test_Unlink_Name() external initialized linkName prank(address(registry)) {
+    function test_Unlink_Name() external initialized linkName {
         address linked = registry.resolveViaName("charles@salva");
         assertEq(linked, EOA);
 
-        singleton.unlinkName("charles");
+        registry.unlinkName("charles");
 
         address unlinked = registry.resolveViaName("charles@salva");
         assertNotEq(unlinked, linked);
@@ -116,5 +117,10 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
 
         vm.expectRevert();
         singleton.linkNumberAlias(acctNumber, EOA);
+    }
+
+    function test_Name_Not_Exceeding_16_Bytes() external initialized {
+        vm.expectRevert(Errors.Errors__Max_Name_Length_Exceeded.selector);
+        registry.linkName("my_name_ns_long_and_cause_this_to_revert", EOA);
     }
 }

@@ -16,3 +16,6 @@
 @SalvaRegistry/=src/SalvaRegistry/
 @TestMultiSig/=test/TestMultiSig/
 @Context/=src/SalvaModules/
+@BaseRegistry/=src/SalvaRegistry/
+@Events/=src/SalvaMultiSig/
+@ISalvaSingleton/=src/Interface/

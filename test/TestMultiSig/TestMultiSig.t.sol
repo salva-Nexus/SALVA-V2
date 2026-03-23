@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.30;
 
 import {BaseTest} from "@BaseTest/BaseTest.t.sol";
 import {Errors} from "@Errors/Errors.sol";
@@ -14,13 +14,13 @@ abstract contract TestMultiSig is BaseTest {
         multisig.proposeValidatorUpdate(owner, false);
     }
 
-    function test_Reject_Reproposal_Or_Validator_Update() external initialized validatorUpdate {
+    function test_Reject_Reproposal_Or_Validator_Update() external initialized proposeValidatorUpdate {
         vm.expectRevert(abi.encodeWithSelector(Errors.Errors__Registry_Init_Proposed.selector));
         multisig.proposeInitialization("@salva", address(registry));
 
         //
         vm.expectRevert(abi.encodeWithSelector(Errors.Errors__Validator_Update_Proposed.selector));
-        multisig.proposeValidatorUpdate(owner, false);
+        multisig.proposeValidatorUpdate(makeAddr("val"), true);
     }
 
     function test_Quorum_Threshold_is_Correct() external {
@@ -29,22 +29,22 @@ abstract contract TestMultiSig is BaseTest {
         multisig.proposeValidatorUpdate(makeAddr("val1"), true);
         multisig.proposeValidatorUpdate(makeAddr("val2"), true);
 
-        multisig.updateValidator(makeAddr("val"));
+        multisig.validateValidator(makeAddr("val"));
         vm.warp(block.timestamp + 48 hours);
         multisig.executeUpdateValidator(makeAddr("val"));
 
         _changePrank(makeAddr("val"));
-        multisig.updateValidator(makeAddr("val1"));
+        multisig.validateValidator(makeAddr("val1"));
         vm.warp(block.timestamp + 48 hours);
         multisig.executeUpdateValidator(makeAddr("val1"));
 
-        multisig.updateValidator(makeAddr("val2"));
+        multisig.validateValidator(makeAddr("val2"));
         vm.warp(block.timestamp + 48 hours);
         multisig.executeUpdateValidator(makeAddr("val2"));
 
         // new proposal to test threshold
         multisig.proposeValidatorUpdate(makeAddr("val3"), true);
-        multisig.updateValidator(makeAddr("val3"));
+        multisig.validateValidator(makeAddr("val3"));
 
         vm.expectRevert(abi.encodeWithSelector(Errors.Error__Invalid_Or_Not_Enough_Time.selector));
         multisig.executeUpdateValidator(makeAddr("val3"));
@@ -62,7 +62,7 @@ abstract contract TestMultiSig is BaseTest {
         multisig.executeUpdateValidator(makeAddr("val3"));
 
         // Now another validator validates
-        multisig.updateValidator(makeAddr("val3"));
+        multisig.validateValidator(makeAddr("val3"));
 
         // but enough time has not passed
         vm.expectRevert(abi.encodeWithSelector(Errors.Error__Invalid_Or_Not_Enough_Time.selector));
@@ -71,5 +71,22 @@ abstract contract TestMultiSig is BaseTest {
         // now enough time has paseed
         vm.warp(block.timestamp + 48 hours);
         multisig.executeUpdateValidator(makeAddr("val3"));
+    }
+
+    function test_Stop_Execution() external proposeInit proposeValidatorUpdate {
+        multisig.validateRegistry(address(registry));
+        multisig.validateValidator(makeAddr("val"));
+
+        // cancel before time passes
+        multisig.cancelInit(address(registry));
+        multisig.cancelValidatorUpdate(makeAddr("val"));
+
+        // Execution reverts
+        vm.warp(block.timestamp + 48 hours);
+        vm.expectRevert(Errors.Error__Invalid_Or_Not_Enough_Time.selector);
+        multisig.executeInit(address(registry));
+
+        vm.expectRevert(Errors.Error__Invalid_Or_Not_Enough_Time.selector);
+        multisig.executeUpdateValidator(makeAddr("val"));
     }
 }

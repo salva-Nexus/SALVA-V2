@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.30;
 
 import {Singleton} from "@Singleton/Singleton.sol";
 
@@ -8,9 +8,12 @@ import {Singleton} from "@Singleton/Singleton.sol";
  * @dev Defers logic to MultiSig.sol. Contains all state variables and proposal structures.
  */
 abstract contract MultiSigStorage {
-    /// @notice Packs the Singleton reference and a write-once guard.
+    /// @notice Time Interval before Execution
+    uint128 internal constant _timeInterval = 48 hours;
+
+    /// @notice Packs the Singleton address and a write-once guard.
     struct SalvaSingleton {
-        Singleton _singleton;
+        address _singleton;
         bool _isSet;
     }
     SalvaSingleton internal _salvaSingleton;

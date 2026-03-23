@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.30;
 
+import {MultiSigStorage} from "@MultiSigStorage/MultiSigStorage.sol";
 import {Errors} from "@Errors/Errors.sol";
+import {Context} from "@Context/Context.sol";
 
-abstract contract MultiSigModifier is Errors {
+abstract contract MultiSigModifier is Errors, MultiSigStorage, Context {
     // Restricts function access to active validators only.
     // Pass _isValidator[sender()] as the argument.
-    modifier onlyValidators(bool _isValidator) {
-        if (!_isValidator) {
+    modifier onlyValidators() {
+        if (!_isValidator[sender()]) {
             revert Errors__Not_Authorized();
         }
         _;
@@ -30,13 +32,10 @@ abstract contract MultiSigModifier is Errors {
     //
     //   eq(cleaned, nspace) → fits in bytes16 → pass ✓
     //   iszero(eq(...))     → exceeds bytes16 → revert ✗
-    modifier enforceBit128(string memory _nspace) {
-        assembly {
-            let nspace := mload(add(_nspace, 0x20))
-            let cleaned := and(nspace, not(0xffffffffffffffffffffffffffffffff))
-            if iszero(eq(cleaned, nspace)) {
-                revert(0x00, 0x00)
-            }
+    modifier enforceBytes16(string memory _nspace) {
+        uint256 len = bytes(_nspace).length;
+        if (len > 0x10) {
+            revert Errors__Max_Name_Length_Exceeded();
         }
         _;
     }
