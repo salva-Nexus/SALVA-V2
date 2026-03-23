@@ -35,4 +35,16 @@ abstract contract Errors {
 
     /// @dev Enough time should have passed before the final call.
     error Error__Invalid_Or_Not_Enough_Time();
+
+    /// @dev Name Length cannot exceed 16 characters
+    error Errors__Max_Name_Length_Exceeded();
+
+    /// @dev No upperCase or numbers allowed
+    error Errors__Invalid_Character();
+
+    /// @dev Caller not registered registry
+    error Errors__Not_Registered();
+
+    /// @dev Name is already taken
+    error Errors__Taken();
 }

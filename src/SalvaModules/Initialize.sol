@@ -4,23 +4,25 @@ pragma solidity ^0.8.28;
 import {BaseSingleton} from "@BaseSingleton/BaseSingleton.sol";
 
 abstract contract Initialize is BaseSingleton {
-    // phishing proof was designed for when registration was decentralized,
-    // now that it's centralized and goes through Salva Admin(s) validation,
-    // i'll have to remove it.... it's redundant...
-    // the only thing i'll worry about is that none of salva admin gets compromised,
-    // imagine wallets like blockchain.com wants to register, with the phishing proof, it'll be @blockchaincom
-    // which is not standard,
-    // cboi@blockchain.com is better
 
+    // Registers a new registry contract with a unique namespace identifier.
+    // Only callable by the Salva MultiSig — no namespace can be claimed without admin approval.
+    // Called once per registry. Reverts on re-registration or identifier collision.
+    //
+    // Even though registration passes through the MultiSig, this function still
+    // validates the data independently — it does not blindly trust its caller.
+    //
+    // VALIDATION ORDER
+    // ─────────────────
+    // [A] onlyMultiSig modifier      — caller must be the Salva MultiSig
+    // [B] address + prefix check     — registry != address(0), _nspace[0] must be '@' (0x40)
+    // [C] double-initialization check — registry has no existing namespace, namespace not already claimed
+    /** 
+    *  @param _registry  The registry contract address to initialize.
+    *  @param _nspace    The bytes16 namespace identifier e.g. "@salva", "@coinbase".
+    *  @return bool      Always true on success.
+    */
     function initializeRegistry(address _registry, bytes16 _nspace) external onlyMultiSig(_MULTISIG) returns (bool) {
-        // registry identifier eg @salva is also your name space, therefor namespace will now return string
-        // namespace length max will now be bytes16 max...
-        // i can imagine @walletconnect or @blockchain.com
-        // byte12 is fucking small
-        // and since this function will be called sparingly, there is no need for the full low level
-        // ======================================================================
-        // even though registration passes through salva admin/ multisig
-        // this function isn't trusting the data
         if (_registry == address(0) || _nspace[0] != 0x40) {
             revert Errors__Invalid_Address_Or_Identifier_Too_Long_Or_Invalid_Prefix();
         }

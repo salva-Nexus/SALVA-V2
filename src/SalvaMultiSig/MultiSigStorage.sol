@@ -16,13 +16,13 @@ abstract contract MultiSigStorage {
     SalvaSingleton internal _salvaSingleton;
 
     /// @notice Total count of active validators used for quorum math.
-    uint256 internal _num_Of_Validators;
+    uint256 internal _numOfValidators;
 
     /// @notice Emergency recovery addresses that bypass quorum for immediate validation.
-    mapping(address => bool) internal _Recovery;
+    mapping(address => bool) internal _recovery;
 
     /// @notice Maps addresses to their active validator status.
-    mapping(address => bool) internal _is_Validator;
+    mapping(address => bool) internal _isValidator;
 
     /**
      * @notice Structure for tracking Registry initialization proposals.
@@ -76,5 +76,5 @@ abstract contract MultiSigStorage {
     }
 
     /// @dev Internal mapping of target addresses to their validator update proposals.
-    mapping(address => ValidatorUpdateRequest) internal _update_Validator;
+    mapping(address => ValidatorUpdateRequest) internal _updateValidator;
 }

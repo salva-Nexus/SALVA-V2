@@ -15,3 +15,4 @@
 @BaseTest/=test/TestSingleton/
 @SalvaRegistry/=src/SalvaRegistry/
 @TestMultiSig/=test/TestMultiSig/
+@Context/=src/SalvaModules/

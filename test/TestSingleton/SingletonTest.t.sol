@@ -36,18 +36,18 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         uint256 gasStop = gasleft();
 
         console.log("Low Leve Link Number Call: ", gasStart - gasStop);
-        address _wallet = registry.resolveViaNumber(acctNumber, address(registry));
+        address _wallet = registry.resolveViaNumber(acctNumber, "@salva");
         console.log(_wallet);
         assertEq(_wallet, EOA);
     }
 
     function test_Unlink_number() external initialized linkNumber prank(address(registry)) {
-        address linked = registry.resolveViaNumber(acctNumber, address(registry));
+        address linked = registry.resolveViaNumber(acctNumber, "@salva");
         assertEq(linked, EOA);
 
-        singleton.unlinkNumber(acctNumber, EOA);
+        singleton.unlinkNumber(acctNumber);
 
-        assertNotEq(registry.resolveViaNumber(acctNumber, address(registry)), linked);
+        assertNotEq(registry.resolveViaNumber(acctNumber, "@salva"), linked);
     }
 
     function test_linkName() external initialized {
@@ -65,15 +65,16 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         address linked = registry.resolveViaName("charles@salva");
         assertEq(linked, EOA);
 
-        singleton.unlinkName("charles@salva", EOA);
+        singleton.unlinkName("charles");
 
-        assertNotEq(registry.resolveViaName("charles@salva"), linked);
+        address unlinked = registry.resolveViaName("charles@salva");
+        assertNotEq(unlinked, linked);
     }
 
     function test_Phishing_Resistance() external initialized {
-        string memory IDENTIFIER = "Paul";
+        string memory _name = "cb0i";
         vm.expectRevert();
-        registry.linkName(IDENTIFIER, EOA);
+        registry.linkName(_name, EOA);
     }
 
     function test_Enforce_Prefix() external prank(owner) {
