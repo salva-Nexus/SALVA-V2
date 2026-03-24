@@ -20,6 +20,10 @@ In the traditional world, you send money using a **Phone Number** or a **Name**.
 
 ---
 
+```solidity
+// Singleton - Base Testnet -> 0x369De9b8a8A28E5e96D8EaE26C62ad1A8529A0c4
+```
+
 ## 🗺️ How it Works (The Flow)
 
 Salva is structured like a secure vault. Before a user can get a name, the "Owner" of that namespace must be verified by a group of guardians (Validators).

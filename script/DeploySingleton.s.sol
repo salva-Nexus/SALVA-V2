@@ -49,12 +49,15 @@ contract DeploySingleton is Script {
     }
 
     function deployLive() public broadcastLive returns (Singleton, MultiSig, SalvaRegistry, address, address) {
+        address backend = 0xfD5A9828bac27495FAb7F6174b3de386E0554187;
         MultiSig multisig = new MultiSig();
         Singleton singleton = new Singleton(address(multisig));
-        SalvaRegistry registry = new SalvaRegistry(address(singleton), msg.sender);
+        SalvaRegistry registry = new SalvaRegistry(address(singleton), backend);
 
-        console.log(address(singleton));
-        console.log(address(registry));
+        multisig.setSingleton(address(singleton));
+        console.log("SINGETON", address(singleton));
+        console.log("REGISTRY", address(registry));
+        console.log("MULTISIG", address(multisig));
         return (singleton, multisig, registry, msg.sender, msg.sender);
     }
 }
