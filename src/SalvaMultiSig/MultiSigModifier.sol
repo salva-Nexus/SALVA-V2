@@ -33,9 +33,12 @@ abstract contract MultiSigModifier is Errors, MultiSigStorage, Context {
     //   eq(cleaned, nspace) → fits in bytes16 → pass ✓
     //   iszero(eq(...))     → exceeds bytes16 → revert ✗
     modifier enforceBytes16(string memory _nspace) {
-        uint256 len = bytes(_nspace).length;
-        if (len > 0x10) {
-            revert Errors__Max_Name_Length_Exceeded();
+        assembly {
+            let nspace := mload(add(_nspace, 0x20))
+            let cleaned := and(nspace, not(0xffffffffffffffffffffffffffffffff))
+            if iszero(eq(cleaned, nspace)) {
+                revert(0x00, 0x00)
+            }
         }
         _;
     }

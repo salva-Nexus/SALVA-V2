@@ -21,7 +21,7 @@ In the traditional world, you send money using a **Phone Number** or a **Name**.
 ---
 
 ```solidity
-// Singleton - Base Testnet -> 0x369De9b8a8A28E5e96D8EaE26C62ad1A8529A0c4
+// Singleton - Base Testnet -> 0x190892cFadd4CFb46Ab29f1CbCd79a2823a93Cf9
 ```
 
 ## 🗺️ How it Works (The Flow)
