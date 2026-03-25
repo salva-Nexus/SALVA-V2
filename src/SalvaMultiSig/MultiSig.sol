@@ -65,7 +65,7 @@ contract MultiSig is MultiSigModifier, Events {
         external
         onlyValidators
         enforceBytes16(_nspace)
-        returns (string memory, bool)
+        returns (address, string memory, bytes16, bool)
     {
         Registry storage reg = _registry[registry];
         if (reg.isProposed || reg.isExecuted) revert Errors__Registry_Init_Proposed();
@@ -78,7 +78,7 @@ contract MultiSig is MultiSigModifier, Events {
         reg.isProposed = true;
 
         emit RegistryInitializationProposed(registry, _nspace, toBytes);
-        return (_nspace, true);
+        return (registry, _nspace, toBytes, true);
     }
 
     // Proposes an update to the validator set — adding or removing a validator.
@@ -88,7 +88,7 @@ contract MultiSig is MultiSigModifier, Events {
      *  @param _action  true = add validator, false = remove validator.
      *  @return bool    Always true on success.
      */
-    function proposeValidatorUpdate(address _addr, bool _action) external onlyValidators returns (bool) {
+    function proposeValidatorUpdate(address _addr, bool _action) external onlyValidators returns (address, bool, bool) {
         ValidatorUpdateRequest storage update = _updateValidator[_addr];
         if (update.isProposed || update.isExecuted) revert Errors__Validator_Update_Proposed();
 
@@ -98,7 +98,7 @@ contract MultiSig is MultiSigModifier, Events {
         update.isProposed = true;
 
         emit ValidatorUpdateProposed(_addr, _action);
-        return true;
+        return (_addr, _action, true);
     }
 
     // Casts a validation vote on a pending registry initialization proposal.
@@ -109,7 +109,7 @@ contract MultiSig is MultiSigModifier, Events {
      *  @param registry  The registry contract address whose proposal to validate.
      *  @return bool     Always true on success.
      */
-    function validateRegistry(address registry) external onlyValidators returns (bool) {
+    function validateRegistry(address registry) external onlyValidators returns (address, bytes16, uint128, bool) {
         Registry storage reg = _registry[registry];
         if (!reg.isProposed) revert Errors__Registry_Init_Not_Proposed();
         if (reg.hasValidated[sender()]) revert Errors__Has_Validated();
@@ -122,9 +122,10 @@ contract MultiSig is MultiSigModifier, Events {
             reg.isValidated = true;
         }
 
+        bytes16 nspace = reg.nspace;
         uint128 remainingValidation = reg.requiredValidationCount - reg.validationCount;
-        emit RegistryValidated(registry, reg.nspace, remainingValidation);
-        return true;
+        emit RegistryValidated(registry, nspace, remainingValidation);
+        return (registry, nspace, remainingValidation, true);
     }
 
     // Casts a validation vote on a pending validator update proposal.
@@ -135,7 +136,7 @@ contract MultiSig is MultiSigModifier, Events {
      *  @param _addr  The target address whose validator update proposal to vote on.
      *  @return bool  Always true on success.
      */
-    function validateValidator(address _addr) external onlyValidators returns (bool) {
+    function validateValidator(address _addr) external onlyValidators returns (address, bool, uint128, bool) {
         ValidatorUpdateRequest storage update = _updateValidator[_addr];
         if (!update.isProposed) revert Errors__Validator_Update_Not_Proposed();
         if (update.hasValidated[sender()]) revert Errors__Has_Validated();
@@ -148,9 +149,10 @@ contract MultiSig is MultiSigModifier, Events {
             update.isValidated = true;
         }
 
+        bool action = update.action;
         uint128 remainingValidation = update.requiredValidationCount - update.validationCount;
         emit ValidatorValidated(_addr, update.action, remainingValidation);
-        return true;
+        return (_addr, action, remainingValidation, true);
     }
 
     /**
