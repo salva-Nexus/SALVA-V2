@@ -7,7 +7,7 @@ import {Events} from "@Events/Events.sol";
 
 // @title  Salva MultiSig
 // @author cboi@Salva
-// @notice Administrative multisig with a 24-hour security timelock for all sensitive actions.
+// @notice Administrative multisig with a 48-hour security timelock for all sensitive actions.
 //
 //         VALIDATOR QUORUM
 //         ─────────────────
@@ -29,7 +29,7 @@ import {Events} from "@Events/Events.sol";
 //
 //         PROPOSAL LIFECYCLE
 //         ───────────────────
-//         propose → validate (repeat until quorum) → 24h timelock → execute
+//         propose → validate (repeat until quorum) → 48h timelock → execute
 //         Once executed, isExecuted is permanent — no re-execution possible.
 contract MultiSig is MultiSigModifier, Events {
     // Sets the deployer as the first validator with a count of 1.
