@@ -54,7 +54,7 @@ contract DeploySingleton is Script {
         Singleton singleton = new Singleton(address(multisig));
         SalvaRegistry registry = new SalvaRegistry(address(singleton), backend);
 
-        multisig.setSingleton(0x190892cFadd4CFb46Ab29f1CbCd79a2823a93Cf9);
+        multisig.setSingleton(address(singleton));
         console.log("SINGETON", address(singleton));
         console.log("REGISTRY", address(registry));
         console.log("MULTISIG", address(multisig));

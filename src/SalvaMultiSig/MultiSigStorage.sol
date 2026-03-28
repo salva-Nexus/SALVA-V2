@@ -42,8 +42,9 @@ abstract contract MultiSigStorage {
     struct Registry {
         address registryAddress;
         bytes16 nspace;
-        uint128 validationCount;
-        uint128 requiredValidationCount;
+        uint32 validationCount;
+        uint32 requiredValidationCount;
+        uint32 remaining;
         bool isProposed;
         mapping(address => bool) hasValidated;
         uint256 timeLock;
@@ -69,8 +70,9 @@ abstract contract MultiSigStorage {
     struct ValidatorUpdateRequest {
         address addr;
         bool action;
-        uint128 validationCount;
-        uint128 requiredValidationCount;
+        uint32 validationCount;
+        uint32 requiredValidationCount;
+        uint32 remaining;
         bool isProposed;
         mapping(address => bool) hasValidated;
         uint256 timeLock;

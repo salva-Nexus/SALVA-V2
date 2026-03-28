@@ -19,3 +19,4 @@
 @BaseRegistry/=src/SalvaRegistry/
 @Events/=src/SalvaMultiSig/
 @ISalvaSingleton/=src/Interface/
+@MultiSigHelper/=src/SalvaMultiSig/

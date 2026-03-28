@@ -28,23 +28,29 @@ abstract contract TestMultiSig is BaseTest {
         multisig.proposeValidatorUpdate(makeAddr("val"), true);
         multisig.proposeValidatorUpdate(makeAddr("val1"), true);
         multisig.proposeValidatorUpdate(makeAddr("val2"), true);
+        assertEq(multisig._validatorValidationCountRemains(makeAddr("val")), 1);
 
         multisig.validateValidator(makeAddr("val"));
+        assertEq(multisig._validatorValidationCountRemains(makeAddr("val")), 0);
         vm.warp(block.timestamp + 48 hours);
         multisig.executeUpdateValidator(makeAddr("val"));
 
         _changePrank(makeAddr("val"));
         multisig.validateValidator(makeAddr("val1"));
+        assertEq(multisig._validatorValidationCountRemains(makeAddr("val1")), 0);
         vm.warp(block.timestamp + 48 hours);
         multisig.executeUpdateValidator(makeAddr("val1"));
 
         multisig.validateValidator(makeAddr("val2"));
+        assertEq(multisig._validatorValidationCountRemains(makeAddr("val2")), 0);
         vm.warp(block.timestamp + 48 hours);
         multisig.executeUpdateValidator(makeAddr("val2"));
 
         // new proposal to test threshold
         multisig.proposeValidatorUpdate(makeAddr("val3"), true);
+        assertEq(multisig._validatorValidationCountRemains(makeAddr("val3")), 2);
         multisig.validateValidator(makeAddr("val3"));
+        assertEq(multisig._validatorValidationCountRemains(makeAddr("val3")), 1);
 
         vm.expectRevert(abi.encodeWithSelector(Errors.Error__Invalid_Or_Not_Enough_Time.selector));
         multisig.executeUpdateValidator(makeAddr("val3"));
@@ -63,6 +69,7 @@ abstract contract TestMultiSig is BaseTest {
 
         // Now another validator validates
         multisig.validateValidator(makeAddr("val3"));
+        assertEq(multisig._validatorValidationCountRemains(makeAddr("val3")), 0);
 
         // but enough time has not passed
         vm.expectRevert(abi.encodeWithSelector(Errors.Error__Invalid_Or_Not_Enough_Time.selector));
