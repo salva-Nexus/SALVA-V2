@@ -14,7 +14,7 @@ In the traditional world, you send money using a **Phone Number** or a **Name**.
 
 ### Key Benefits
 
-- **Universal onchain naming + resolution Layer** Charles can map he's coinbase address to charles@coinbase, chainlink can point AggregatorV3 address to aggregatorv3@chainlink, or vrf@chainlink.. all differ across all Singleton deployed accross various chains.
+- **Universal onchain naming + resolution Layer:** Charles can map he's coinbase address to charles@coinbase, chainlink can point AggregatorV3 address to aggregatorv3@chainlink, or vrf@chainlink.. all differ across all Singleton deployed accross various chains.
 
 - **Phishing Protection:** Scammers can't trick you by using capital letters (e.g., `Charles` vs `charles`). Salva sees them as the same person.
 - **One Person, One Name:** You can't "squat" on multiple names within the same app.
