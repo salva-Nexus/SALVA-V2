@@ -14,14 +14,18 @@ In the traditional world, you send money using a **Phone Number** or a **Name**.
 
 ### Key Benefits
 
+- **Universal onchain naming + resolution Layer** Charles can map he's coinbase address to charles@coinbase, chainlink can point AggregatorV3 address to aggregatorv3@chainlink, or vrf@chainlink.. all differ across all Singleton deployed accross various chains.
+
 - **Phishing Protection:** Scammers can't trick you by using capital letters (e.g., `Charles` vs `charles`). Salva sees them as the same person.
 - **One Person, One Name:** You can't "squat" on multiple names within the same app.
-- **Extreme Speed:** Built using advanced "Assembly" logic, making it one of the fastest and cheapest tools on the Base network.
 
 ---
 
 ```solidity
-// Singleton - Base Testnet -> 0x190892cFadd4CFb46Ab29f1CbCd79a2823a93Cf9
+// Singleton - Base Testnet -> <>
+// Singleton - Base Mainnet -> <>
+// Singleton - Eth Testnet -> <>
+// Singleton - Eth Mainnet -> <>
 ```
 
 ## 🗺️ How it Works (The Flow)
@@ -55,11 +59,13 @@ COINBASE: `alice` → `0x456...` - alice now owns alice@coinbase pointing to her
 
 UNISWAP: `alice` → `0x789...` - alice now owns alice@uniswap pointing to her uniswap Wallet Address
 
+UNISWAP: `router` -> `0x453...` - Uniswap router contract address now at router@uniswap
+
 **Link a Number:** 
 
 SALVA WALLET: `5265733930` → `0x123...` - alice now owns 5265733930 pointing to her Salva Wallet Address
 
-Numbers don't use the namespace raw, but they are still isolated per namespace techinically.
+Numbers are not welded to name spaces, but they are still isolated per namespace techinically.
 
 And so on..
 
