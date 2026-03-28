@@ -1,75 +1,83 @@
 <div align="center">
-  <h1>🛡️ Salva V2 </h1>
-  <p><b>On-Chain Payment Infrastructure for the Next Billion</b></p>
-  
+  <h1>🛡️ Salva V2</h1>
+  <p><b>On-Chain Naming + Resolution Infrastructure for the Next Billion</b></p>
+
   <img src="https://img.shields.io/badge/Network-Base-blue?style=for-the-badge&logo=base" />
-  <img src="https://img.shields.io/badge/Stack-Solidity_|_Assembly/Yul-61DAFB?style=for-the-badge&logo=react" />
+  <img src="https://img.shields.io/badge/Stack-Solidity_|_Assembly/Yul-61DAFB?style=for-the-badge&logo=ethereum" />
+  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
 </div>
+
+---
 
 # 🛡️ Salva V2
 
-In the traditional world, you send money using a **Phone Number** or a **Name**. In crypto, you have to use long, confusing addresses like `0x71C...`.
+In the traditional world, you send money using a **number** or a **name**. In crypto, you send to an address like `0x71C7656EC7ab88b098defB751B7401B5f6d8976F`.
 
-**Salva** bridges this gap. It allows any application (like a bank, a wallet, or a payment app) to create its own private directory where users can link their real-world identity to their digital wallet—safely, permanently, and with zero room for impersonation.
+**Salva** closes that gap. It allows any application — a wallet, a payment app, a protocol — to create its own isolated namespace where users can link a human-readable identity to their on-chain address. Permanently. Without impersonation.
 
-### Key Benefits
+Every namespace is isolated. `alice@salva` and `alice@coinbase` are different identities, belonging to different people, on different apps. The Singleton is the single source of truth for all of them.
 
-- **Universal onchain naming + resolution Layer:** Charles can map he's coinbase address to charles@coinbase, chainlink can point AggregatorV3 address to aggregatorv3@chainlink, or vrf@chainlink.. all differ across all Singleton deployed accross various chains.
+---
 
-- **Phishing Protection:** Scammers can't trick you by using capital letters (e.g., `Charles` vs `charles`). Salva sees them as the same person.
-- **One Person, One Name:** You can't "squat" on multiple names within the same app.
+## Key Properties
+
+- **Universal On-Chain Identity Layer** — Any application can plug in. `charles@coinbase`, `aggregatorv3@chainlink`, `router@uniswap` — all resolved through the same Singleton deployed across chains.
+- **Namespace Isolation** — What happens inside `@salva` has no effect on `@coinbase`. Each registry is completely independent.
+- **Phishing Protection** — The contract enforces lowercase-only identities. `Charles` and `charles` are treated as the same person. A scammer cannot register a visually identical name.
+- **One Identity Per Wallet** — A wallet can hold at most one name alias and one number alias per namespace. No squatting.
+- **Permanent Registration** — Once a namespace is registered, it cannot be deleted. Aliases are one-time assignments.
 
 ---
 
 ```solidity
-// Singleton - Base Testnet -> <>
-// Singleton - Base Mainnet -> <>
-// Singleton - Eth Testnet -> <>
-// Singleton - Eth Mainnet -> <>
+// Singleton - Base Testnet  -> <>
+// Singleton - Base Mainnet  -> <>
+// Singleton - Eth Testnet   -> <>
+// Singleton - Eth Mainnet   -> <>
 ```
 
-## 🗺️ How it Works (The Flow)
+---
 
-Salva is structured like a secure vault. Before a user can get a name, the "Owner" of that namespace must be verified by a group of guardians (Validators).
+## 🗺️ How it Works
 
-### 1. The Guardians (MultiSig)
+### 1. The Guardians — MultiSig
 
-A group of trusted Validators must agree to open a new "Registry."
+No namespace can be claimed without approval from a quorum of Salva validators.
 
-- **The Rule:** No one can just claim a brand name like `@coinbase` or `@metamask` without thorough verification.
-- **The Safety:** Every major change has a **24-hour waiting period** to prevent rush decisions.
+- A validator proposes a new registry with its namespace identifier (e.g. `@coinbase`).
+- A majority of validators must approve the proposal.
+- Once quorum is reached, a **48-hour timelock** begins. The proposal cannot execute until the window expires — giving validators time to detect and block any malicious or erroneous registration.
+- After 48 hours, any validator can call `executeInit` to finalize the registration.
 
-### 2. The App Gateways (Registries)
+This prevents namespace squatting. Nobody registers `@metamask` or `@trustwallet` without the real protocol being behind it.
 
-Each app (like a Payment App) gets its own isolated "Registry."
-A Registry like - @salva, @coinbase, @uniswap, etc
+### 2. The App Gateways — Registries
 
-- Think of this as a private phonebook.
-- What happens in the "App A" phonebook doesn't affect "App B."
+Each approved application gets its own isolated registry under a unique namespace.
 
-### 3. The Users
+Think of it as a private phonebook. `@salva` is Salva's phonebook. `@coinbase` is Coinbase's phonebook. The contents of one have no effect on the other.
 
-Once an app is live, users can link their details:
+### 3. The Users — Aliases
 
-**Link a Name:**
+Once a registry is live, users can link their identity:
 
-SALVA WALLET: `alice` → `0x123...` - alice now owns alice@salva pointing to her Salva Wallet Address
+**Name Aliases**
 
-COINBASE: `alice` → `0x456...` - alice now owns alice@coinbase pointing to her coinbase Wallet Address
+| App | Name | Wallet |
+|---|---|---|
+| `@salva` | `alice` | `0x123...` → `alice@salva` |
+| `@coinbase` | `alice` | `0x456...` → `alice@coinbase` |
+| `@uniswap` | `router` | `0x453...` → `router@uniswap` |
 
-UNISWAP: `alice` → `0x789...` - alice now owns alice@uniswap pointing to her uniswap Wallet Address
+**Number Aliases**
 
-UNISWAP: `router` -> `0x453...` - Uniswap router contract address now at router@uniswap
+| App | Number | Wallet |
+|---|---|---|
+| `@salva` | `5265733930` | `0x123...` |
 
-**Link a Number:** 
+Numbers are scoped per namespace. The same number can exist across different registries without collision.
 
-SALVA WALLET: `5265733930` → `0x123...` - alice now owns 5265733930 pointing to her Salva Wallet Address
-
-Numbers are not welded to name spaces, but they are still isolated per namespace techinically.
-
-And so on..
-
-**NOTE:** alice@salva and alice@coinbase are different identities, made unique by there namespaces - @walletname
+> `alice@salva` and `alice@coinbase` are different identities. The namespace is what makes them unique.
 
 ---
 
@@ -84,11 +92,26 @@ forge install
 forge build
 ```
 
+### Build Your Registry
+
+```solidity
+import {BaseRegistry} from "./BaseRegistry.sol";
+
+contract MyRegistry is BaseRegistry {
+    constructor(address singleton) BaseRegistry(singleton) {}
+
+    function link(uint128 number, address wallet) external {}
+}
+```
+
 ### Testing
 
 ```bash
 forge test
+forge test -vvv
 ```
+
+---
 
 ## ⚖️ License
 
