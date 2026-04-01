@@ -115,6 +115,15 @@ abstract contract NameLib is Modifier, Storage {
                 if (i == length - 1 || nameToBytes[i + 1] == 0x40) {
                     // This is like a forward, makes i == length, so that i < length will be false and stop the loop
                     i = length - 1;
+                    // New: calldata Length Manipulation Check
+                    // Incase the wrong length is passed in raw calldata
+                    // We also check if not equal to '@', incase this is being called by a view function
+                    // or unlink function, so this doesn't revert
+                    // This is robust enough that even if you pass charles@salva in the link function
+                    // It will stop the loop right before '@' and use only the name
+                    if (nameToBytes[i + 1] > 0x00 && nameToBytes[i + 1] != 0x40) {
+                        revert Errors__Invalid_Length();
+                    }
                     assembly {
                         secondLength := cursor
                         // Extraction: Load segment and shift to high bits for 'upper/lower' check

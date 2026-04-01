@@ -46,9 +46,6 @@ Salva automatically prevents "look-alike" scams using lowercase enforcement and 
 **Strict Integrity**
 The protocol enforces a One-Link rule. A name can point to a Wallet **or** a Number, but never both. This prevents data ambiguity and ensures 1:1 mapping.
 
-**Permanent & Fair**
-Once a name is linked within a namespace, it is set. This prevents name squatting and ensures the identity remains a reliable pointer for the long term.
-
 ---
 
 ## 🗺️ How It Works

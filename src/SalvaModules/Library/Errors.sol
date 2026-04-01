@@ -59,4 +59,7 @@ abstract contract Errors {
 
     /// @dev Only one underscore use
     error Errors__Only_One_Underscore_Use();
+
+    /// @dev Calldata length can't be manipulated
+    error Errors__Invalid_Length();
 }
