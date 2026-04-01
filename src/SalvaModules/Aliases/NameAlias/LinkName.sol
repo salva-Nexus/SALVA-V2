@@ -1,113 +1,82 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {BaseSingleton} from "@BaseSingleton/BaseSingleton.sol";
+import {Resolve} from "@Resolve/Resolve.sol";
 
-abstract contract LinkName is BaseSingleton {
-    // Links a human-readable name alias to a wallet address under the caller's namespace.
-    // Only a registered registry may call this. The same name can exist across different
-    // registries without collision because the storage key is a weld of the name bytes
-    // and the registry's namespace — the name alone is never the key.
+/**
+ * @title LinkName
+ * @notice Entry point for binding namespaced aliases to addresses or numbers.
+ * @dev Combines namespace retrieval, name normalization, and storage-key welding.
+ */
+abstract contract LinkName is Resolve {
     /**
-     *  @param _name    The name alias to link e.g. "charles". Validated by phishingProof —
-     *                 only lowercase letters, digits 2–9, '.', '-', '_' allowed. Max 16 bytes.
-     *  @param _wallet  The wallet address to link the name alias to.
-     *  @return _isLinked  Always true on success.
+     * @notice Links a name alias (e.g., "charles") to a destination under the caller's namespace.
+     * @dev Callable only by registered registries. Enforces one-link-to-data and anti-phishing rules.
+     * @param name The local alias bytes (e.g., "charles").
+     * @param wallet The destination wallet address. Set to address(0) if linking to a number.
+     * @param number The destination account number. Set to 0 if linking to a wallet.
+     * @return isLinked True on successful storage write.
      */
     // ─────────────────────────────────────────────────────────────────────────
-    // STEP 1 — CALLER VERIFICATION
+    // STEP 1 — NAMESPACE RETRIEVAL
     // ─────────────────────────────────────────────────────────────────────────
-    // namespace(sender()) loads the caller's bytes16 namespace from _registryNamespace.
-    // If zero, they never called initializeRegistry → revert.
-    //
+    // 1. Query sender() in the Registry mapping.
+    // 2. Extract bytes16 handle (e.g., "@salva") and its length.
+    // 3. If namespace is 0x00, the caller isn't a registered registry -> REVERT.
     // ─────────────────────────────────────────────────────────────────────────
-    // STEP 2 — NAME WELDING (assembly)
+    // STEP 2 — NAME DATA EXTRACTION (Calldata)
     // ─────────────────────────────────────────────────────────────────────────
-    // The weldedName packs the name and namespace into a single bytes32 key —
-    // producing a namespaced identity like "charles@salva".
-    //
-    //   NAMESPACE NORMALIZATION
-    //   ────────────────────────
-    //   _registryNamespace stores bytes16. Solidity left-aligns bytes16 within
-    //   the RIGHT half of a bytes32 slot:
-    //
-    //   nspace (loaded):
-    //   0x000000000000000000000000000000004073616c766100000000000000000000
-    //    ├─────── 16 zero bytes ─────────┤├────── @salva + padding ──────┤
-    //
-    //   If nameLen < 16 — shift nspace to the right(after length of name):
-    //   shr(mul(nameLen, 0x08), nspace) then OR with name.
-    //
-    //   If nameLen == 16 — shift to the right half,
-    //   nspace already sits in the right half at its loaded position.
-    //
-    //   switch eq(nameLen, 0x10)
-    //   case 0x00 → _fullName = or(shr(mul(nameLen, 0x08), nspace), name)
-    //   default   → _fullName = or(shr(0x80, nspace), name)
-    //
-    //   EXAMPLE — name = "charles" (7 bytes), namespace = "@salva" (6 bytes):
-    //
-    //   nspace:
-    //   0x4073616c76610000000000000000000000000000000000000000000000000000
-    //
-    //   shr(56 bits):
-    //   0x00000000000000 4073616c766100000000000000000000000000000000000000
-    //    ├ 7 zero bytes┤"@salva"
-    //
-    //   OR name:
-    //   0x636861726c6573 4073616c766100000000000000000000000000000000000000
-    //    "charles"        "@salva"
-    //
-    //   _fullName = "charles@salva" packed in bytes32 ✓
-    //
-    //   MAX WELD SIZE: name (bytes16) + namespace (bytes16) = full bytes32.
-    //
+    // name (bytes calldata) Layout:
+    // [ 0x00 - 0x1F ]: length (e.g., 7 for "charles")
+    // [ 0x20 - 0x3F ]: raw data ("charles") -> loaded into nameToBytes
     // ─────────────────────────────────────────────────────────────────────────
-    // STEP 3 — COLLISION + WALLET CHECK
+    // STEP 3 — STORAGE KEY WELDING
     // ─────────────────────────────────────────────────────────────────────────
-    // Two checks before writing:
-    // 1. _nameToWallet[_fullName] != address(0) → name already taken → revert
-    // 2. _walletAliases[_wallet].name != bytes32(0) → wallet already has a name → revert
-    //
+    // fullLength = nameLength + namespaceLength
+    // 1. _normalizeAndValidate: Flips "a_b" to "b_a" (alphabetical) for phishing protection.
+    // 2. _computeNameHash:
+    //    [ Normalized Name ][ Namespace ]
+    //    ├────── name ─────┤├─ handle ──┤ -> keccak256 -> nameHash
     // ─────────────────────────────────────────────────────────────────────────
-    // STEP 4 — STORAGE WRITES
+    // STEP 4 — CONDITIONAL STORAGE WRITE
     // ─────────────────────────────────────────────────────────────────────────
-    // 1. _nameToWallet[_fullName] = _wallet   — forward resolution
-    // 2. _walletAliases[_wallet].name = _fullName — reverse mapping (bidirectional protection)
-    function linkNameAlias(string memory _name, address _wallet)
+    // if (wallet != 0) -> Sstore(nameHash, wallet)
+    // else             -> Sstore(nameHash, number)
+    // ─────────────────────────────────────────────────────────────────────────
+    function linkNameAlias(bytes calldata name, address wallet, uint256 number)
         external
-        phishingProof(_name)
-        returns (bool _isLinked)
+        onlyOneLinkToData
+        returns (bool isLinked)
     {
-        (bytes16 nspace,) = namespace(sender());
-        if (nspace == bytes16(0)) {
+        // Action: Fetch caller's assigned namespace
+        (bytes16 namespaceHandle, bytes1 namespaceLength) = namespace(sender());
+        if (namespaceHandle == bytes16(0)) {
             revert Errors__Not_Registered();
         }
 
-        bytes32 _fullName;
+        uint256 nameLength;
+        bytes32 nameToBytes;
         assembly {
-            let nameLen := mload(_name)
-            let name := mload(add(_name, 0x20))
-
-            // if nameLen == 16, nspace already sits in right half — no shift needed
-            switch eq(nameLen, 0x10)
-            case 0x00 {
-                _fullName := or(shr(mul(nameLen, 0x08), nspace), name)
-            }
-            default {
-                _fullName := or(shr(0x80, nspace), name)
-            }
+            // Action: Extract local name length from calldata
+            nameLength := name.length
+            // Action: Load raw bytes into a word for normalization
+            nameToBytes := calldataload(name.offset)
         }
 
-        address checkWallet = _nameToWallet[_fullName];
-        bytes32 checkName = _walletAliases[_wallet].name;
-        if (checkWallet != address(0) || checkName != bytes32(0)) {
-            revert Errors__Taken();
-        }
+        // Action: Calculate total size for the hash buffer (Name + @Namespace)
+        uint256 fullLength = nameLength + uint256(uint8(namespaceLength));
 
-        _nameToWallet[_fullName] = _wallet;
-        _walletAliases[_wallet].name = _fullName;
+        // Action: Perform Anti-Phishing Flip & Character Validation
+        // mark: 0 = Enforce strict a-z, 2-9, _ rules for WRITE operations
+        _normalizeAndValidate(nameLength, nameToBytes, 0);
 
-        _isLinked = true;
+        // Action: Generate the unique storage pointer (welded key)
+        // storageCheck: 0 = Perform collision check to ensure name isn't "Taken"
+        bytes32 nameHash = _computeNameHash(namespaceHandle, nameLength, fullLength, 0);
+
+        // Action: Determine link type and execute storage write
+        // Diagram: [ nameHash ] -> { address } OR { uint256 }
+        isLinked =
+            wallet == address(0) ? _performLinkToNumber(nameHash, number) : _performLinkToWallet(nameHash, wallet);
     }
 }

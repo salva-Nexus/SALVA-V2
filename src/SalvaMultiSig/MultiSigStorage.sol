@@ -5,43 +5,71 @@ import {Singleton} from "@Singleton/Singleton.sol";
 
 /**
  * @title Salva MultiSig Storage
- * @dev Defers logic to MultiSig.sol. Contains all state variables and proposal structures.
+ * @notice Centralized state management for the Salva MultiSig infrastructure.
+ * @dev Designed with packed structs to optimize SLOAD/SSTORE operations.
  */
 abstract contract MultiSigStorage {
-    /// @notice Time Interval before Execution
+    // ─────────────────────────────────────────────────────────────────────────
+    // PROTOCOL PARAMETERS
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * @notice Time Interval before Execution (48 Hours)
+     * DIAGRAMMATIC ACTION:
+     * [ Current Timestamp ] + [ 172,800 seconds ] = [ Earliest Execution Time ]
+     * Enforces a security buffer for all registry and validator proposals.
+     */
     uint128 internal constant _timeInterval = 48 hours;
 
-    /// @notice Packs the Singleton address and a write-once guard.
+    /**
+     * @notice Singleton Pointer
+     * DIAGRAMMATIC ACTION:
+     * [ address (20 bytes) ][ isSet (1 byte) ]
+     * Packed into a single 32-byte slot. _isSet prevents pointing to a new
+     * Singleton once initialized (Write-Once).
+     */
     struct SalvaSingleton {
         address _singleton;
         bool _isSet;
     }
     SalvaSingleton internal _salvaSingleton;
 
-    /// @notice Total count of active validators used for quorum math.
+    // ─────────────────────────────────────────────────────────────────────────
+    // VALIDATOR & RECOVERY STATE
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// @notice Tracks the quorum denominator for MultiSig consensus.
     uint256 internal _numOfValidators;
 
-    /// @notice Emergency recovery addresses that bypass quorum for immediate validation.
+    /// @notice Recovery addresses can bypass quorum for immediate validation.
     mapping(address => bool) internal _recovery;
 
-    /// @notice Maps addresses to their active validator status.
+    /// @notice Tracks active validator permissions.
     mapping(address => bool) internal _isValidator;
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // PROPOSAL STRUCTURES (The Consensus Engine)
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
-     * @notice Structure for tracking Registry initialization proposals.
-     * @param registryAddress The target contract to be initialized.
-     * @param nspace The 12-byte namespace identifier (e.g., "@salva").
-     * @param validationCount Current number of approvals received.
-     * @param requiredValidationCount Quorum required at the time of proposal.
-     * @param isProposed Boolean flag to prevent duplicate proposals.
-     * @param hasValidated Tracks individual validator votes to prevent double-voting.
-     * @param timeLock The Unix timestamp after which final execution is permitted.
-     * @param isValidated Flag set once quorum is reached or recovery address intervenes.
-     * @param isExecuted Finality flag to prevent re-execution of the same proposal.
+     * @notice Registry initialization proposal tracking.
+     * * ─────────────────────────────────────────────────────────────────────────
+     * STORAGE LAYOUT (Registry Struct)
+     * ─────────────────────────────────────────────────────────────────────────
+     * 1. registryAddress: The contract to be initialized.
+     * 2. nspace/len:      The welded namespace handle (e.g., "@salva").
+     * 3. Counters:        validationCount / requiredValidationCount / remaining.
+     * (Packed into uint32s to minimize slot usage).
+     * 4. hasValidated:    Nested mapping to prevent double-voting.
+     * 5. timeLock:        Enforces the 48-hour delay before execution.
+     * * ─────────────────────────────────────────────────────────────────────────
+     * PROPOSAL FLOW:
+     * Proposed -> Validating (Quorum Check) -> Validated (Timelock Start) -> Executed
+     * ─────────────────────────────────────────────────────────────────────────
      */
     struct Registry {
         address registryAddress;
         bytes16 nspace;
+        bytes1 len;
         uint32 validationCount;
         uint32 requiredValidationCount;
         uint32 remaining;
@@ -52,20 +80,21 @@ abstract contract MultiSigStorage {
         bool isExecuted;
     }
 
-    /// @dev Internal mapping of registry addresses to their respective proposals.
+    /// @dev Maps target registry addresses to their active proposals.
     mapping(address => Registry) internal _registry;
 
     /**
-     * @notice Structure for tracking Validator set update proposals.
-     * @param addr The address to be added or removed.
-     * @param action True for adding, false for removing.
-     * @param validationCount Current approvals.
-     * @param requiredValidationCount Quorum threshold.
-     * @param isProposed Prevents redundant update requests.
-     * @param hasValidated Prevents duplicate votes from the same validator.
-     * @param timeLock The Unix timestamp after which the final update can be finalized.
-     * @param isValidated Flag set once quorum or recovery approval is met.
-     * @param isExecuted Permanent flag to mark the update as finished.
+     * @notice Validator set update proposal tracking.
+     * * ─────────────────────────────────────────────────────────────────────────
+     * UPDATE LOGIC (ValidatorUpdateRequest)
+     * ─────────────────────────────────────────────────────────────────────────
+     * action: [ True = Add Validator ] | [ False = Remove Validator ]
+     * * DIAGRAMMATIC CONSENSUS:
+     * 1. Validator A Proposes Update(address X, action ADD).
+     * 2. Validator B Signs -> remaining counter decrements.
+     * 3. Threshold Met -> timeLock set to block.timestamp + 48h.
+     * 4. 48h Passes -> finalizeUpdate() sets _isValidator[X] = true.
+     * ─────────────────────────────────────────────────────────────────────────
      */
     struct ValidatorUpdateRequest {
         address addr;
@@ -80,6 +109,6 @@ abstract contract MultiSigStorage {
         bool isExecuted;
     }
 
-    /// @dev Internal mapping of target addresses to their validator update proposals.
+    /// @dev Maps target addresses to their validator update requests.
     mapping(address => ValidatorUpdateRequest) internal _updateValidator;
 }

@@ -47,4 +47,16 @@ abstract contract Errors {
 
     /// @dev Name is already taken
     error Errors__Taken();
+
+    /// @dev Can only can this function with on data to link
+    error Error__Only_One_Link_To_Data();
+
+    /// @dev Must input a value
+    error Errors__Invalid_Values();
+
+    /// @dev Must input only one value
+    error Errors__Only_One_Value();
+
+    /// @dev Only one underscore use
+    error Errors__Only_One_Underscore_Use();
 }

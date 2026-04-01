@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {Script} from "forge-std/Script.sol";
 import {Singleton} from "@Singleton/Singleton.sol";
 import {MultiSig} from "@MultiSig/MultiSig.sol";
-import {SalvaRegistry} from "@SalvaRegistry/Registry.sol";
+import {BaseRegistry} from "@BaseRegistry/BaseRegistry.sol";
 import {console} from "forge-std/Test.sol";
 
 contract DeploySingleton is Script {
@@ -29,30 +29,30 @@ contract DeploySingleton is Script {
         vm.stopBroadcast();
     }
 
-    function run() external returns (Singleton, MultiSig, SalvaRegistry, address, address) {
+    function run() external returns (Singleton, MultiSig, BaseRegistry, address, address) {
         if (block.chainid != 31337) {
-            (Singleton _singleton, MultiSig multisig, SalvaRegistry _registry, address _deployer, address _registrar) =
+            (Singleton _singleton, MultiSig multisig, BaseRegistry _registry, address _deployer, address _registrar) =
                 deployLive();
             return (_singleton, multisig, _registry, _deployer, _registrar);
         } else {
-            (Singleton _singleton, MultiSig multisig, SalvaRegistry _registry, address _deployer, address _registrar) =
+            (Singleton _singleton, MultiSig multisig, BaseRegistry _registry, address _deployer, address _registrar) =
                 deploySingletonForTest();
             return (_singleton, multisig, _registry, _deployer, _registrar);
         }
     }
 
-    function deploySingletonForTest() public broadcast returns (Singleton, MultiSig, SalvaRegistry, address, address) {
+    function deploySingletonForTest() public broadcast returns (Singleton, MultiSig, BaseRegistry, address, address) {
         MultiSig multisig = new MultiSig();
         Singleton singleton = new Singleton(address(multisig));
-        SalvaRegistry registry = new SalvaRegistry(address(singleton), registrar);
+        BaseRegistry registry = new BaseRegistry(address(singleton), registrar);
         return (singleton, multisig, registry, deployer, registrar);
     }
 
-    function deployLive() public broadcastLive returns (Singleton, MultiSig, SalvaRegistry, address, address) {
+    function deployLive() public broadcastLive returns (Singleton, MultiSig, BaseRegistry, address, address) {
         address backend = 0xfD5A9828bac27495FAb7F6174b3de386E0554187;
         MultiSig multisig = new MultiSig();
         Singleton singleton = new Singleton(address(multisig));
-        SalvaRegistry registry = new SalvaRegistry(address(singleton), backend);
+        BaseRegistry registry = new BaseRegistry(address(singleton), backend);
 
         multisig.setSingleton(address(singleton));
         console.log("SINGETON", address(singleton));

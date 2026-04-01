@@ -3,18 +3,18 @@ pragma solidity ^0.8.30;
 
 import {MultiSig} from "@MultiSig/MultiSig.sol";
 import {Singleton} from "@Singleton/Singleton.sol";
-import {SalvaRegistry} from "@SalvaRegistry/Registry.sol";
+import {BaseRegistry} from "@BaseRegistry/BaseRegistry.sol";
 import {Test} from "forge-std/Test.sol";
 
 abstract contract BaseTest is Test {
     Singleton internal singleton;
     MultiSig internal multisig;
-    SalvaRegistry internal registry;
+    BaseRegistry internal registry;
     address internal owner;
     address internal registrar;
     address internal EOA;
-    uint128 internal acctNumber;
-    string internal name;
+    uint256 internal number;
+    bytes internal name;
 
     modifier initialized() {
         // MultiSig Validation
@@ -23,14 +23,14 @@ abstract contract BaseTest is Test {
         multisig.validateRegistry(address(registry));
         vm.warp(block.timestamp + 48 hours);
         multisig.executeInit(address(registry));
-        _changePrank(registrar);
+        _changePrank(address(registrar));
         _;
         _stopPrank();
     }
 
     modifier initializedRegistry2() {
         _changePrank(owner);
-        SalvaRegistry reg = new SalvaRegistry(address(singleton), owner);
+        BaseRegistry reg = new BaseRegistry(address(singleton), owner);
         multisig.proposeInitialization("@coinbase", address(reg));
         multisig.validateRegistry(address(reg));
         vm.warp(block.timestamp + 48 hours);
@@ -53,13 +53,8 @@ abstract contract BaseTest is Test {
         _stopPrank();
     }
 
-    modifier linkNumber() {
-        registry.linkNumber(acctNumber, EOA);
-        _;
-    }
-
     modifier linkName() {
-        registry.linkName(name, EOA);
+        registry.linkToWallet(name, EOA);
         _;
     }
 

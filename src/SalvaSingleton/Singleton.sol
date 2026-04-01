@@ -2,54 +2,56 @@
 pragma solidity ^0.8.30;
 
 import {Initialize} from "@Initialize/Initialize.sol";
-import {LinkNumber} from "@LinkNumber/LinkNumber.sol";
 import {LinkName} from "@LinkName/LinkName.sol";
-import {UnlinkNumber} from "@UnlinkNumber/UnlinkNumber.sol";
 import {UnlinkName} from "@UnlinkName/UnlinkName.sol";
 
 /**
- *          @title  Salva Singleton
- *          @author cboi@Salva
- *          @notice Core registry enabling namespace-isolated account alias to address resolution.
+ * @title Singleton
+ * @notice The primary entry point for SALVA's name-to-wallet/number infrastructure.
+ * @dev Combines registry initialization, resolution, linking, and unlinking.
  */
-//         This contract is the final composition layer — it inherits all functional modules
-//         and exposes the complete protocol interface. It contains no logic of its own.
-//
-//         INHERITANCE STRUCTURE
-//         ──────────────────────
-//         BaseSingleton (Storage + Errors + Modifier)
-//              ↑
-//         Initialize · LinkNumber · LinkName · UnlinkNumber · UnlinkName
-//              ↑
-//         Singleton  ←  you are here
-//
-//         DEPLOYMENT
-//         ───────────
-//         Deployed once. Immutable. Takes the MultiSig address in the constructor —
-//         all privileged functions (initializeRegistry) are gated behind the Admin(s) MultiSig.
-//         No upgradability. No admin keys. No second deployment.
-contract Singleton is Initialize, LinkNumber, LinkName, UnlinkNumber, UnlinkName {
+contract Singleton is Initialize, LinkName, UnlinkName {
+    // ─────────────────────────────────────────────────────────────────────────
+    // PROTOCOL CONSTANTS
+    // ─────────────────────────────────────────────────────────────────────────
     /**
-     *       @dev Protocol version stored as a bytecode constant.
+     * @dev Protocol version stored as a bytecode constant.
+     * DIAGRAMMATIC ACTION:
+     * [ PUSH1 0x02 ] -> Baked into contract bytecode.
+     * Eliminates SLOAD (2100 gas) by replacing it with a cheap PUSH (3 gas).
      */
-    //      Declared `constant` so the value is embedded directly in bytecode,
-    //      eliminating SLOAD cost.
     uint8 private constant _VERSION = 2;
 
-    // Sets the MultiSig address — the only account authorized to call initializeRegistry.
-    // Called once at deployment. Cannot be changed after.
     /**
-     *   @param _multiSig  The address of the deployed Salva MultiSig contract.
+     * @notice Sets the administrative MultiSig address during deployment.
+     * * ─────────────────────────────────────────────────────────────────────────
+     * DEPLOYMENT STATE (Constructor)
+     * ─────────────────────────────────────────────────────────────────────────
+     * 1. Assigns the immutable _MULTISIG address.
+     * 2. This address is the ONLY account capable of calling initializeRegistry.
+     * 3. Cannot be updated.
+     * * ─────────────────────────────────────────────────────────────────────────
      */
     constructor(address _multiSig) {
         _MULTISIG = _multiSig;
     }
 
-    // Returns the protocol version baked into bytecode.
     /**
-     *   @return uint8  Always 2 for this deployment.
+     * @notice Returns the protocol version identifier.
+     * * DIAGRAMMATIC FLOW:
+     * 1. Function called (Pure).
+     * 2. Returns value 2 directly from bytecode.
      */
     function version() public pure returns (uint8) {
         return _VERSION;
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // INHERITED CAPABILITIES (Summary)
+    // ─────────────────────────────────────────────────────────────────────────
+    // 1. Initialize: Handles multi-sig protected registry setup.
+    // 2. LinkName:   Handles alias -> address or number binding with anti-phishing.
+    // 3. UnlinkName: Handles the removal of alias bindings.
+    // 4. Resolve:    (via Link/Unlink) Provides view functions for resolution.
+    // ─────────────────────────────────────────────────────────────────────────
 }

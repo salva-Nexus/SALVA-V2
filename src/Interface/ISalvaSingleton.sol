@@ -1,32 +1,42 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-/**
- * @title ISalvaSingleton
- * @notice Interface for the core Salva naming and namespace management system.
- */
 interface ISalvaSingleton {
-    /// @notice Registers a unique namespace to a specific registry contract address.
-    function initializeRegistry(address _registry, bytes16 _nspace) external returns (bool);
+    /**
+     * @notice Registers a unique namespace to a specific registry contract address.
+     * @param registry The registry address to query.
+     * @param namespaceHandle The bytes16 namespace assigned to this registry.
+     * @param namespaceLength The length of the assigned namespace.
+     */
+    function initializeRegistry(address registry, bytes16 namespaceHandle, bytes1 namespaceLength)
+        external
+        returns (bool);
 
-    /// @notice Welds a name and namespace into a bytes32 alias and links it to a wallet.
-    function linkNameAlias(string memory _name, address _wallet) external returns (bool _isLinked);
+    /**
+     * @notice Welds a name and namespace into a bytes32 alias and links it to a wallet or account number.
+     * @dev Uses onlyOneLinkToData modifier logic internally to ensure mutual exclusivity.
+     */
+    function linkNameAlias(bytes calldata name, address wallet, uint256 accountNumber) external returns (bool isLinked);
 
-    /// @notice Removes the link between a welded name alias and its associated wallet.
-    function unlinkName(string memory _name) external returns (bool _isUnlinked);
+    /**
+     * @notice Removes the link between a welded name alias and its associated data.
+     */
+    function unlink(bytes calldata name) external returns (bool isUnlinked);
 
-    /// @notice Maps a uint128 number within a namespace to a specific wallet address.
-    function linkNumberAlias(uint128 _num, address _wallet) external returns (bool _isLinked);
+    /**
+     * @notice Retrieves the wallet address associated with a name containing a namespace.
+     * @param aliasName The full name including the namespace (e.g., "charles_okoronkwo@salva").
+     */
+    function resolveAddress(bytes calldata aliasName) external view returns (address wallet);
 
-    /// @notice Clears the mapping for a specific number alias within the caller's namespace.
-    function unlinkNumber(uint128 _num) external returns (bool _isUnlinked);
+    /**
+     * @notice Retrieves the account number associated with a name containing a namespace.
+     * @param aliasName The full name including the namespace.
+     */
+    function resolveNumber(bytes calldata aliasName) external view returns (uint256 accountNumber);
 
-    /// @notice Retrieves the wallet address associated with a namespace-prefixed number.
-    function resolveAddressViaNumber(uint128 _num, bytes16 _namespace) external view returns (address _wallet);
-
-    /// @notice Returns the wallet address linked to a pre-welded bytes32 name alias.
-    function resolveAddressViaName(bytes32 _name) external view returns (address _wallet);
-
-    /// @notice Checks the registered namespace and initialization status of a registry contract.
-    function namespace(address _registry) external view returns (bytes16 _nspace, bool _initialized);
+    /**
+     * @notice Checks the registered namespace and length of a registry contract.
+     */
+    function namespace(address registry) external view returns (bytes16 namespaceHandle, bytes1 namespaceLength);
 }

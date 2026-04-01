@@ -1,75 +1,79 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {BaseSingleton} from "@BaseSingleton/BaseSingleton.sol";
+import {Resolve} from "@Resolve/Resolve.sol";
 
-abstract contract UnlinkName is BaseSingleton {
-    // Unlinks a name alias from its wallet address under the caller's namespace.
-    // Only a registered registry may call this.
-    //
-    // Only the name is passed — the wallet address is derived from the name via
-    // _nameToWallet. This prevents an attacker from passing in another person's
-    // wallet address to unlink their alias.
-    //
-    // No existence check is performed — if the name is not linked, the call
-    // silently zeroes already-zero slots. Caller wastes only their own gas.
+/**
+ * @title UnlinkName
+ * @notice Logic for removing the binding between an alias and its stored data.
+ * @dev Reconstructs the storage key from calldata to zero out the specific slot.
+ */
+abstract contract UnlinkName is Resolve {
     /**
-     * @param _name      The name alias to unlink e.g. "charles".
-     * @return _isUnlinked  Always true on success.
+     * @notice Unlinks a namespaced alias by clearing its storage slot.
+     * @dev Callable only by registered registries. Re-normalizes the name to
+     * reconstruct the canonical storage key before zeroing the slot.
+     * @param name The local alias bytes to unlink (e.g., "charles").
+     * @return _isUnlinked True on successful storage deletion.
      */
     // ─────────────────────────────────────────────────────────────────────────
-    // STEP 1 — CALLER VERIFICATION
+    // STEP 1 — CALLER IDENTITY & NAMESPACE
     // ─────────────────────────────────────────────────────────────────────────
-    // namespace(sender()) loads the caller's bytes16 namespace.
-    // If zero, they never called initializeRegistry → revert.
-    //
+    // 1. Query the registry mapping for the sender().
+    // 2. Retrieve the assigned bytes16 namespaceHandle and its length.
+    // 3. Ensure the caller is authorized to manage this namespace.
     // ─────────────────────────────────────────────────────────────────────────
-    // STEP 2 — NAME WELDING (assembly)
+    // STEP 2 — RAW DATA RECOVERY (Calldata)
     // ─────────────────────────────────────────────────────────────────────────
-    // Same weld logic as linkNameAlias — reconstructs the same _fullName key
-    // that was stored at link time so the correct slot can be zeroed.
-    //
-    //   switch eq(nameLen, 0x10)
-    //   case 0x00 → _fullName = or(shr(mul(nameLen, 0x08), nspace), name)
-    //   default   → _fullName = or(shr(0x80, nspace), name)
-    //
+    // name (bytes calldata) Layout:
+    // [ 0x00 - 0x1F ]: nameLength
+    // [ 0x20 - 0x3F ]: raw alias data -> nameToBytes
     // ─────────────────────────────────────────────────────────────────────────
-    // STEP 3 — WALLET DERIVATION
+    // STEP 3 — STORAGE KEY RE-WELDING
     // ─────────────────────────────────────────────────────────────────────────
-    // _wallet = _nameToWallet[_fullName]
-    // The wallet address is read from the forward mapping — not taken from the caller.
-    // This is the security fix: passing a wallet param would allow an attacker to
-    // unlink a victim's alias by supplying the victim's address directly.
-    //
+    // fullLength = nameLength + namespaceLength
+    // 1. _normalizeAndValidate:
+    //    Re-generates the flipped/canonical version of the name.
+    //    mark: 1 -> Skipping strict char validation as we are deleting.
+    // 2. _computeNameHash:
+    //    [ Flipped Name ][ Namespace ] -> keccak256 -> nameHash
+    //    storageCheck: 1 -> Skipping the "Taken" check since we are unlinking.
     // ─────────────────────────────────────────────────────────────────────────
-    // STEP 4 — STORAGE WRITES
+    // STEP 4 — STORAGE ZEROING
     // ─────────────────────────────────────────────────────────────────────────
-    // 1. _nameToWallet[_fullName] = address(0)   — clear forward mapping
-    // 2. _walletAliases[_wallet].name = bytes32(0) — clear reverse mapping
-    function unlinkName(string memory _name) external returns (bool _isUnlinked) {
-        (bytes16 nspace,) = namespace(sender());
-        if (nspace == bytes16(0)) {
+    // _performUnlink(nameHash):
+    // assembly { sstore(nameHash, 0x00) }
+    // Effectively deletes the link to the address or number.
+    // ─────────────────────────────────────────────────────────────────────────
+    function unlink(bytes calldata name) external returns (bool _isUnlinked) {
+        // Action: Fetch the namespace belonging to the caller
+        (bytes16 namespaceHandle, bytes1 namespaceLength) = namespace(sender());
+        if (namespaceHandle == bytes16(0)) {
             revert Errors__Not_Registered();
         }
 
-        bytes32 _fullName;
+        uint256 nameLength;
+        bytes32 nameToBytes;
         assembly {
-            let nameLen := mload(_name)
-            let name := mload(add(_name, 0x20))
-
-            switch eq(nameLen, 0x10)
-            case 0x00 {
-                _fullName := or(shr(mul(nameLen, 0x08), nspace), name)
-            }
-            default {
-                _fullName := or(shr(0x80, nspace), name)
-            }
+            // Action: Extract local name length from calldata
+            nameLength := name.length
+            // Action: Load raw bytes for normalization
+            nameToBytes := calldataload(name.offset)
         }
 
-        address _wallet = _nameToWallet[_fullName];
-        _nameToWallet[_fullName] = address(0);
-        _walletAliases[_wallet].name = bytes32(0);
+        // Action: Calculate total length for the canonical hash
+        uint256 fullLength = nameLength + uint256(uint8(namespaceLength));
 
-        _isUnlinked = true;
+        // Action: Re-normalize the name (re-flip segments if underscore exists)
+        // mark: 1 = Skipping strict character set validation for removal
+        _normalizeAndValidate(nameLength, nameToBytes, 1);
+
+        // Action: Re-generate the welded storage key
+        // storageCheck: 1 = Skipping collision check
+        bytes32 nameHash = _computeNameHash(namespaceHandle, nameLength, fullLength, 1);
+
+        // Action: Execute storage deletion
+        // Diagram: Sstore(nameHash, 0x00) -> Frees slot & triggers gas refund
+        _isUnlinked = _performUnlink(nameHash);
     }
 }

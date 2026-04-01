@@ -1,0 +1,196 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.30;
+
+import {Modifier} from "@Modifier/Modifier.sol";
+import {Storage} from "@Storage/Storage.sol";
+
+/**
+ * @title NameLib
+ * @notice Internal library for name normalization and cryptographic hashing.
+ * @dev High-performance assembly for name-welding and anti-phishing normalization.
+ */
+abstract contract NameLib is Modifier, Storage {
+    // ─────────────────────────────────────────────────────────────────────────
+    // FUNCTION 1 — NAME HASHING (Storage Slot Generation)
+    // ─────────────────────────────────────────────────────────────────────────
+    // Generates a unique keccak256 pointer by welding the name and namespace.
+    //
+    // MEMORY LAYOUT BEFORE HASHING:
+    // [ 0x00 ............................ nameLength ][ namespace (16 bytes) ]
+    //   ├─────────────── name bytes ────────────────┤├────── nspace ───────┤
+    //
+    // The hash is computed over the 'fullLength' (name + namespace).
+    function _computeNameHash(bytes16 namespace, uint256 nameLength, uint256 fullLength, uint256 storageCheck)
+        internal
+        view
+        returns (bytes32 nameHash)
+    {
+        assembly {
+            // STEP: APPEND NAMESPACE
+            // mstore at the offset of nameLength creates a contiguous byte array:
+            // [ name_data ][ namespace ]
+            mstore(add(0x00, nameLength), namespace)
+
+            // STEP: GENERATE SLOT KEY
+            // we are not following normal hashing with slot.
+            // nameHash = keccak256(Memory[0x00 : fullLength])
+            // fullLength = name + namespace -> eg. charles@salva
+            nameHash := keccak256(0x00, fullLength)
+        }
+
+        if (storageCheck == 0) {
+            _checkCollision(nameHash);
+        }
+    }
+
+    /**
+     * @dev Normalizes split names (names with underscore) to prevent order-based phishing.
+     * * ─────────────────────────────────────────────────────────────────────────
+     * PHISHING PROTECTION LOGIC (The "Flip")
+     * ─────────────────────────────────────────────────────────────────────────
+     * Input:  "charles_okoronkwo"  OR  "okoronkwo_charles"
+     * Result: Deterministic order based on alphabetical bit-value.
+     * * 1. SPLIT: Detect '_' and capture Segment A and Segment B.
+     * 2. ALIGN: Shift segments LEFT for direct comparison (high-order bits).
+     * 3. SORT:  upper = SegmentA > SegmentB ? A : B
+     * 4. WELD:  [upper][ 0x5f ][lower]
+     */
+    function _normalizeAndValidate(uint256 length, bytes32 nameToBytes, uint8 mark)
+        internal
+        pure
+        returns (uint256 processedLength)
+    {
+        if (length > 0x20) {
+            revert Errors__Max_Name_Length_Exceeded();
+        }
+
+        uint8 underscoreCount;
+        bytes32 firstPart;
+        uint256 firstLength;
+        bytes32 secondPart;
+        uint256 secondLength;
+        bool isSplit;
+        uint256 cursor;
+
+        for (uint256 i = 0; i < length;) {
+            bytes1 char = nameToBytes[i];
+
+            // ─────────────────────────────────────────────────────────────────
+            // STEP 1 — CHARACTER VALIDATION (a-z, 2-9, _)
+            // ─────────────────────────────────────────────────────────────────
+            if (mark == 0) {
+                // if mark == 0?? -> 0 is only write function (link)
+                // 1 is unlink and view function, so we skip this check
+                if (!(char >= 0x61 && char <= 0x7a) && !(char >= 0x32 && char <= 0x39) && char != 0x5f) {
+                    revert Errors__Invalid_Character();
+                }
+            }
+
+            // ─────────────────────────────────────────────────────────────────
+            // STEP 2 — SEGMENT CAPTURE (Memory Buffering)
+            // ─────────────────────────────────────────────────────────────────
+            if (!isSplit) {
+                assembly {
+                    mstore(add(0x00, cursor), char)
+                    cursor := add(cursor, 0x01)
+                }
+                if (char == 0x5f) {
+                    assembly {
+                        // firstLength = cursor - 1
+                        firstLength := sub(cursor, 0x01)
+                        // Extraction: Load segment and shift to high bits for 'upper/lower' check
+                        firstPart := shr(sub(0x100, mul(firstLength, 0x08)), mload(0x00))
+                        cursor := 0x00
+                    }
+                }
+            } else {
+                assembly {
+                    mstore(add(0x00, cursor), char)
+                    cursor := add(cursor, 0x01)
+                }
+
+                // Finalize Segment 2 if end of string or namespace @ symbol detected
+                // Cus this function is also called my a view function that take full name(with namespace)
+                // We stop the loop so a not to proceed to adding @namespace to the actual name
+                if (i == length - 1 || nameToBytes[i + 1] == 0x40) {
+                    // This is like a forward, makes i == length, so that i < length will be false and stop the loop
+                    i = length - 1;
+                    assembly {
+                        secondLength := cursor
+                        // Extraction: Load segment and shift to high bits for 'upper/lower' check
+                        secondPart := shr(sub(0x100, mul(secondLength, 0x08)), mload(0x00))
+                    }
+                }
+            }
+
+            if (char == 0x5f) {
+                isSplit = true;
+                unchecked {
+                    underscoreCount++;
+                }
+                if (underscoreCount > 1) revert Errors__Only_One_Underscore_Use();
+            }
+            unchecked {
+                i++;
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // STEP 3 — ALPHABETICAL RECONSTRUCTION
+        // ─────────────────────────────────────────────────────────────────
+        if (underscoreCount > 0) {
+            // Compare shifted bytes32 parts (dictionary order)
+            bytes32 upper = firstPart > secondPart ? firstPart : secondPart;
+            bytes32 lower = firstPart < secondPart ? firstPart : secondPart;
+            uint256 bigLen = firstPart > secondPart ? firstLength : secondLength;
+            uint256 smlLen = firstPart > secondPart ? secondLength : firstLength;
+
+            assembly {
+                // MEMORY REBUILD:
+                // 1. Store Upper Part (Left Aligned)
+                mstore(0x00, shl(sub(0x100, mul(bigLen, 0x08)), upper))
+                // 2. Inject Underscore (0x5f) at offset bigLen
+                mstore8(add(0x00, bigLen), 0x5f)
+                // 3. Store Lower Part (Left Aligned) immediately after
+                mstore(add(add(0x00, bigLen), 0x01), shl(sub(0x100, mul(smlLen, 0x08)), lower))
+            }
+            processedLength = firstLength + secondLength + 1;
+        } else {
+            processedLength = firstLength + secondLength;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // STEP 4 — STORAGE ENGINE
+    // ─────────────────────────────────────────────────────────────────────────
+    // sload and sstore directly using the welded hash as the key.
+
+    function _checkCollision(bytes32 nameHash) internal view {
+        bytes32 storedValue;
+        assembly {
+            storedValue := sload(nameHash) // Check if slot is occupied
+        }
+        if (storedValue != bytes32(0)) revert Errors__Taken();
+    }
+
+    function _performLinkToWallet(bytes32 nameHash, address _wallet) internal returns (bool _isLinked) {
+        assembly {
+            sstore(nameHash, _wallet) // Map Hash -> Address
+        }
+        _isLinked = true;
+    }
+
+    function _performLinkToNumber(bytes32 nameHash, uint256 _number) internal returns (bool _isLinked) {
+        assembly {
+            sstore(nameHash, _number) // Map Hash -> Number
+        }
+        _isLinked = true;
+    }
+
+    function _performUnlink(bytes32 nameHash) internal returns (bool _isUnLinked) {
+        assembly {
+            sstore(nameHash, 0x00) // Burn mapping
+        }
+        _isUnLinked = true;
+    }
+}
