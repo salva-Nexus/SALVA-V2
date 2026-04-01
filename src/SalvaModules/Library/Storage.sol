@@ -52,7 +52,7 @@ abstract contract Storage {
     // Forward resolution from Alias Hash to Number.
     // DIAGRAMMATIC ACTION:
     // [ nameHash ] -> [ uint256 number ]
-    // Used for identifying users via numeric IDs linked to their @handle.
+    // Name to any number of choice
     mapping(bytes32 _nameHash => uint256 _number) internal _nameToNumber;
 
     // Forward resolution from Alias Hash to Wallet Address.
