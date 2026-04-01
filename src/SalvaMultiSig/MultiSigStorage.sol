@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {Singleton} from "@Singleton/Singleton.sol";
-
 /**
  * @title Salva MultiSig Storage
  * @notice Centralized state management for the Salva MultiSig infrastructure.

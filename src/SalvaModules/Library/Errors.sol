@@ -57,8 +57,8 @@ abstract contract Errors {
     /// @dev Must input only one value
     error Errors__Only_One_Value();
 
-    /// @dev Only one underscore use
-    error Errors__Only_One_Underscore_Use();
+    /// @dev Max Underscore is one
+    error Errors__Max_One_Underscore_Allowed();
 
     /// @dev Calldata length can't be manipulated
     error Errors__Invalid_Length();

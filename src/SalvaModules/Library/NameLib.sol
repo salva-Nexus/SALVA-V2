@@ -137,7 +137,7 @@ abstract contract NameLib is Modifier, Storage {
                 unchecked {
                     underscoreCount++;
                 }
-                if (underscoreCount > 1) revert Errors__Only_One_Underscore_Use();
+                if (underscoreCount > 1) revert Errors__Max_One_Underscore_Allowed();
             }
             unchecked {
                 i++;
