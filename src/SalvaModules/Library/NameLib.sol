@@ -8,14 +8,14 @@ import {Storage} from "@Storage/Storage.sol";
  * @title NameLib
  * @notice Internal library for name normalization and cryptographic hashing.
  * @dev High-performance assembly for name-welding and anti-phishing normalization.
- * This version is namespace-aware; it identifies the '@' symbol to isolate the alias
+ * This version is namespace-aware; it identifies the namespace prefix to isolate the alias
  * from the namespace suffix during processing.
  */
 abstract contract NameLib is Modifier, Storage {
     // ─────────────────────────────────────────────────────────────────────────
     // FUNCTION 1 — NAME HASHING (Storage Slot Generation)
     // ─────────────────────────────────────────────────────────────────────────
-    
+
     /**
      * @notice Generates a unique keccak256 pointer by welding the name and namespace.
      * @dev Uses assembly to mstore the namespace immediately after name bytes in memory.
@@ -38,7 +38,7 @@ abstract contract NameLib is Modifier, Storage {
             // STEP: GENERATE SLOT KEY
             // we are not following normal hashing with slot.
             // nameHash = keccak256(Memory[0x00 : fullLength])
-            // fullLength = name + namespace -> eg. charles@salva
+            // fullLength = name + namespace
             nameHash := keccak256(0x00, fullLength)
         }
 
@@ -50,8 +50,8 @@ abstract contract NameLib is Modifier, Storage {
     /**
      * @notice Normalizes split names and strips namespaces for deterministic storage.
      * @dev Handles "charles_okoronkwo" vs "okoronkwo_charles" by sorting segments.
-     * It is now robust enough to handle full handles (name@namespace) by terminating
-     * segment capture when the '@' (0x40) character is detected.
+     * It is now robust enough to handle full handles by terminating
+     * segment capture when the namespace prefix (0x40) character is detected.
      * @param length Input length of the raw name or full handle.
      * @param nameToBytes The raw bytes32 representation of the name.
      * @param mark Flag to toggle strict character validation (0 for link, 1 for view/unlink).
@@ -187,8 +187,9 @@ abstract contract NameLib is Modifier, Storage {
     // ─────────────────────────────────────────────────────────────────────────
     // STEP 4 — STORAGE ENGINE
     // ─────────────────────────────────────────────────────────────────────────
-    
-    /** * @dev Internal check to prevent overwriting existing name records.
+
+    /**
+     * @dev Internal check to prevent overwriting existing name records.
      */
     function _checkCollision(bytes32 nameHash) internal view {
         bytes32 storedValue;
@@ -198,7 +199,8 @@ abstract contract NameLib is Modifier, Storage {
         if (storedValue != bytes32(0)) revert Errors__Taken();
     }
 
-    /** * @dev Maps a name hash to a wallet address in storage.
+    /**
+     * @dev Maps a name hash to a wallet address in storage.
      */
     function _performLinkToWallet(bytes32 nameHash, address _wallet) internal returns (bool _isLinked) {
         assembly {
@@ -207,7 +209,8 @@ abstract contract NameLib is Modifier, Storage {
         _isLinked = true;
     }
 
-    /** * @dev Maps a name hash to a numeric value in storage.
+    /**
+     * @dev Maps a name hash to a numeric value in storage.
      */
     function _performLinkToNumber(bytes32 nameHash, uint256 _number) internal returns (bool _isLinked) {
         assembly {
@@ -216,7 +219,8 @@ abstract contract NameLib is Modifier, Storage {
         _isLinked = true;
     }
 
-    /** * @dev Clears a name record from storage.
+    /**
+     * @dev Clears a name record from storage.
      */
     function _performUnlink(bytes32 nameHash) internal returns (bool _isUnLinked) {
         assembly {
