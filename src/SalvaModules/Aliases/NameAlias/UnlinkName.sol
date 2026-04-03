@@ -61,12 +61,12 @@ abstract contract UnlinkName is Resolve {
             nameToBytes := calldataload(name.offset)
         }
 
-        // Action: Calculate total length for the canonical hash
-        uint256 fullLength = nameLength + uint256(uint8(namespaceLength));
+        // Action: Perform Anti-Phishing Flip & Character Validation
+        // mark: 0 = Enforce strict a-z, 2-9, _ rules for WRITE operations
+        uint256 processedNameLen = _normalizeAndValidate(nameLength, nameToBytes, 1);
 
-        // Action: Re-normalize the name (re-flip segments if underscore exists)
-        // mark: 1 = Skipping strict character set validation for removal
-        _normalizeAndValidate(nameLength, nameToBytes, 1);
+        // Action: Calculate total size for the hash buffer (Name + @Namespace)
+        uint256 fullLength = processedNameLen + uint256(uint8(namespaceLength));
 
         // Action: Re-generate the welded storage key
         // storageCheck: 1 = Skipping collision check

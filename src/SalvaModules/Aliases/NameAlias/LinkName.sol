@@ -63,12 +63,12 @@ abstract contract LinkName is Resolve {
             nameToBytes := calldataload(name.offset)
         }
 
-        // Action: Calculate total size for the hash buffer (Name + @Namespace)
-        uint256 fullLength = nameLength + uint256(uint8(namespaceLength));
-
         // Action: Perform Anti-Phishing Flip & Character Validation
         // mark: 0 = Enforce strict a-z, 2-9, _ rules for WRITE operations
-        _normalizeAndValidate(nameLength, nameToBytes, 0);
+        uint256 processedNameLen = _normalizeAndValidate(nameLength, nameToBytes, 0);
+
+        // Action: Calculate total size for the hash buffer (Name + @Namespace)
+        uint256 fullLength = processedNameLen + uint256(uint8(namespaceLength));
 
         // Action: Generate the unique storage pointer (welded key)
         // storageCheck: 0 = Perform collision check to ensure name isn't "Taken"

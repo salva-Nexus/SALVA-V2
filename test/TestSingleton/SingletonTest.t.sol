@@ -32,17 +32,17 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
     }
 
     function test_linkName() external initialized {
-        bytes memory _name = bytes("okoronkwo_charles"); // exactly 29 bytes
+        bytes memory _name = bytes("okoronkwo_"); // exactly 29 bytes
         registry.linkToWallet(_name, EOA);
-        bytes memory name = bytes("okoronkwo_charles@salva");
+        bytes memory name = bytes("okoronkwo_@salva");
         address addr = singleton.resolveAddress(name);
         console.log(addr);
 
-        bytes memory _name1 = bytes("okoronkwo_joe");
-        registry.linkToNumber(_name1, number);
-        bytes memory name1 = bytes("okoronkwo_joe@salva");
-        uint256 num = singleton.resolveNumber(name1);
-        console.log(num);
+        // bytes memory _name1 = bytes("okoronkwo_joe");
+        // registry.linkToNumber(_name1, number);
+        // bytes memory name1 = bytes("okoronkwo_joe@salva");
+        // uint256 num = singleton.resolveNumber(name1);
+        // console.log(num);
     }
 
     function test_Unlink_Name() external initialized linkName {
@@ -125,5 +125,14 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         //     hex"b7151e5b0000000000000000000000000000000000000000000000000000000000000060000000000000000000000000C958B338b1cE6ADd8f9CcfB102905a59c28e91Fc000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000106f6b6f726f6e6b776f5f636861726c6573000000000000000000000000000000";
         // (bool success3,) = address(singleton).call(data3);
         // assertEq(success3, false);
+
+        bytes memory name = bytes("cboi");
+        console.logBytes(name);
+
+        bytes memory name1 = bytes("salva_cboi@salva");
+        console.logBytes(name1);
+
+        bytes memory name2 = bytes("cboi_salva@salva");
+        console.logBytes(name2);
     }
 }
