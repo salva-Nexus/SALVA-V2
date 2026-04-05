@@ -5,48 +5,59 @@ import {Resolve} from "@Resolve/Resolve.sol";
 
 /**
  * @title LinkName
- * @notice Entry point for binding namespaced aliases to addresses or numbers.
- * @dev Combines namespace retrieval, name normalization, and storage-key welding.
+ * @notice Entry point for binding a namespaced alias to a wallet address.
+ * @dev Orchestrates namespace retrieval, name normalization, storage-key
+ *      welding, and the final wallet-address write in a single atomic call.
+ *
+ *      Call flow:
+ *        Registry → linkNameAlias → _normalizeAndValidate
+ *                                 → _computeNameHash
+ *                                 → _performLinkToWallet
  */
 abstract contract LinkName is Resolve {
     /**
-     * @notice Links a name alias (e.g., "charles") to a destination under the caller's namespace.
-     * @dev Callable only by registered registries. Enforces one-link-to-data and anti-phishing rules.
-     * @param name The local alias bytes (e.g., "charles").
-     * @param wallet The destination wallet address. Set to address(0) if linking to a number.
-     * @param number The destination account number. Set to 0 if linking to a wallet.
-     * @return isLinked True on successful storage write.
+     * @notice Links a local name alias to a destination wallet address under
+     *         the calling registry's namespace.
+     *
+     * @dev Only registered registries may call this function. The caller's
+     *      namespace is read from singleton storage — it is never supplied by
+     *      the user. The name is normalized and welded with the namespace to
+     *      produce a collision-resistant storage key.
+     *
+     * ── STEP 1 · NAMESPACE RETRIEVAL ────────────────────────────────────────
+     *  1. Resolve `sender()` against the registry mapping in singleton storage.
+     *  2. Extract the `bytes16` namespace handle and its length.
+     *  3. If the handle is `0x00` the caller is not a registered registry → REVERT.
+     *
+     * ── STEP 2 · NAME EXTRACTION (Calldata) ─────────────────────────────────
+     *  `name` (bytes calldata) layout:
+     *    [ 0x00 – 0x1F ] length word  (e.g. 7 for "charles")
+     *    [ 0x20 – 0x3F ] raw UTF-8 bytes → loaded into `nameToBytes`
+     *
+     * ── STEP 3 · STORAGE-KEY WELDING ────────────────────────────────────────
+     *  `fullLength` = normalizedNameLength + namespaceLength
+     *  a. `_normalizeAndValidate` — enforces character rules and applies the
+     *     anti-phishing alphabetical flip for underscore-split names.
+     *  b. `_computeNameHash`:
+     *       [ Normalized Name ][ Namespace Handle ]
+     *       ├──── name ───────┤├──── handle ──────┤ → keccak256 → nameHash
+     *
+     * ── STEP 4 · STORAGE WRITE ──────────────────────────────────────────────
+     *  `_performLinkToWallet(nameHash, wallet, _sender)`
+     *    → sstore(nameHash, wallet)          — forward resolution
+     *    → sstore(senderHash, nameHash)      — ownership index for unlink
+     *
+     * @param name    Raw alias bytes supplied by the user (e.g. `"charles"`).
+     *                Must be ≤ 32 bytes, lowercase a–z, digits 2–9, max one `_`.
+     * @param wallet  Destination wallet address to bind to the alias.
+     * @param _sender The originating user EOA, captured by the registry as
+     *                `msg.sender` and forwarded here for ownership indexing.
+     * @return isLinked `true` on a successful storage write.
      */
-    // ─────────────────────────────────────────────────────────────────────────
-    // STEP 1 — NAMESPACE RETRIEVAL
-    // ─────────────────────────────────────────────────────────────────────────
-    // 1. Query sender() in the Registry mapping.
-    // 2. Extract bytes16 handle (e.g., "@salva") and its length.
-    // 3. If namespace is 0x00, the caller isn't a registered registry -> REVERT.
-    // ─────────────────────────────────────────────────────────────────────────
-    // STEP 2 — NAME DATA EXTRACTION (Calldata)
-    // ─────────────────────────────────────────────────────────────────────────
-    // name (bytes calldata) Layout:
-    // [ 0x00 - 0x1F ]: length (e.g., 7 for "charles")
-    // [ 0x20 - 0x3F ]: raw data ("charles") -> loaded into nameToBytes
-    // ─────────────────────────────────────────────────────────────────────────
-    // STEP 3 — STORAGE KEY WELDING
-    // ─────────────────────────────────────────────────────────────────────────
-    // fullLength = nameLength + namespaceLength
-    // 1. _normalizeAndValidate: Flips "a_b" to "b_a" (alphabetical) for phishing protection.
-    // 2. _computeNameHash:
-    //    [ Normalized Name ][ Namespace ]
-    //    ├────── name ─────┤├─ handle ──┤ -> keccak256 -> nameHash
-    // ─────────────────────────────────────────────────────────────────────────
-    // STEP 4 — CONDITIONAL STORAGE WRITE
-    // ─────────────────────────────────────────────────────────────────────────
-    // if (wallet != 0) -> Sstore(nameHash, wallet)
-    // else             -> Sstore(nameHash, number)
-    // ─────────────────────────────────────────────────────────────────────────
-    function linkNameAlias(bytes calldata name, address wallet, uint256 number, address _sender)
+    function linkNameAlias(bytes calldata name, address wallet, address _sender)
         external
         payable
-        onlyOneLinkToData
+        nonReentrant
         returns (bool isLinked)
     {
         // Action: Fetch caller's assigned namespace
@@ -75,10 +86,8 @@ abstract contract LinkName is Resolve {
         // storageCheck: 0 = Perform collision check to ensure name isn't "Taken"
         bytes32 nameHash = _computeNameHash(namespaceHandle, processedNameLen, fullLength, 0);
 
-        // Action: Determine link type and execute storage write
-        // Diagram: [ nameHash ] -> { address } OR { uint256 }
-        isLinked = wallet == address(0)
-            ? _performLinkToNumber(nameHash, number, _sender)
-            : _performLinkToWallet(nameHash, wallet, _sender);
+        // Action: Execute wallet-address storage write
+        // Diagram: [ nameHash ] → { address wallet }
+        isLinked = _performLinkToWallet(nameHash, wallet, _sender);
     }
 }

@@ -6,64 +6,37 @@ import {Context} from "@Context/Context.sol";
 
 /**
  * @title Modifier
- * @notice Validation logic for input integrity and access control.
- * @dev Uses assembly for high-performance calldata inspection.
+ * @notice Shared modifier library for the Salva singleton.
+ * @dev Provides reentrancy protection via EIP-1153 transient storage and
+ *      MultiSig-only access control.
  */
 abstract contract Modifier is Errors, Context {
     /**
-     * @dev Ensures that a name alias links to EITHER a wallet OR a number, never both or none.
-     * * ─────────────────────────────────────────────────────────────────────────
-     * STEP 1 — CALLDATA INSPECTION (Assembly)
-     * ─────────────────────────────────────────────────────────────────────────
-     * Based on function: linkNameAlias(bytes name, address wallet, uint256 number)
-     * Calldata Layout:
-     * [ 0x00 - 0x03 ]: Function Selector
-     * [ 0x04 - 0x23 ]: 'name' bytes offset
-     * [ 0x24 - 0x43 ]: 'wallet' (address)
-     * [ 0x44 - 0x63 ]: 'number' (uint256)
-     * * DIAGRAMMATIC ACTION:
-     * 1. Calldataload(0x24) -> Extracts the 'wallet' address.
-     * 2. Calldataload(0x44) -> Extracts the 'number'.
-     * * ─────────────────────────────────────────────────────────────────────────
-     * STEP 2 — EXCLUSIVITY LOGIC
-     * ─────────────────────────────────────────────────────────────────────────
-     * XOR-style validation:
-     * - Case A: Wallet is 0x0? Number MUST NOT be 0.
-     * - Case B: Wallet is set? Number MUST be 0.
-     * ─────────────────────────────────────────────────────────────────────────
+     * @notice Guards against reentrant calls using transient storage slot 0x00.
+     * @dev Uses `tload` / `tstore` (EIP-1153) for gas-efficient reentrancy
+     *      locking that is automatically cleared at the end of the transaction.
+     *      Reverts with empty data on reentrant entry.
      */
-    modifier onlyOneLinkToData() {
-        address _wallet;
-        uint256 _number;
+    modifier nonReentrant() {
         assembly {
-            // Action: Skip selector and name offset to grab parameters
-            _wallet := calldataload(0x24)
-            _number := calldataload(0x44)
-        }
-
-        if (_wallet == address(0)) {
-            // Diagram: If no wallet, a number is required for the link.
-            if (_number == 0) {
-                revert Errors__Invalid_Values();
+            if gt(tload(0x00), 0x00) {
+                revert(0x00, 0x00)
             }
-        } else {
-            // Diagram: If wallet is present, number must be empty (prevent dual-link).
-            if (_number != 0) {
-                revert Errors__Only_One_Value();
-            }
+            tstore(0x00, 0x01)
         }
         _;
+        assembly {
+            tstore(0x00, 0x00) // this is just for test, will comment out before deployment
+        }
     }
 
     /**
-     * @dev Restricts function access to the Salva MultiSig contract only.
-     * * ─────────────────────────────────────────────────────────────────────────
-     * ACCESS CONTROL FLOW
-     * ─────────────────────────────────────────────────────────────────────────
-     * 1. Resolve caller via sender().
-     * 2. Compare against protocol-defined multiSig address.
-     * 3. Result: Permission granted ONLY for authorized registry initialization.
-     * ─────────────────────────────────────────────────────────────────────────
+     * @notice Restricts access to the Salva MultiSig contract.
+     * @dev Resolves the caller via `sender()` and compares against the
+     *      protocol-defined `multiSig` address.  Used exclusively to gate
+     *      registry initialization — no other operation is authorized through
+     *      this modifier.
+     * @param multiSig The expected MultiSig contract address.
      */
     modifier onlyMultiSig(address multiSig) {
         if (sender() != multiSig) revert Errors__Not_Authorized();

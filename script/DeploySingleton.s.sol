@@ -6,6 +6,7 @@ import {Singleton} from "@Singleton/Singleton.sol";
 import {MultiSig} from "@MultiSig/MultiSig.sol";
 import {BaseRegistry} from "@BaseRegistry/BaseRegistry.sol";
 import {console} from "forge-std/Test.sol";
+import {MockV3Aggregator} from "@MockV3Aggregator/MockV3Aggregator.sol";
 
 contract DeploySingleton is Script {
     uint256 deployerKey;
@@ -29,34 +30,61 @@ contract DeploySingleton is Script {
         vm.stopBroadcast();
     }
 
-    function run() external returns (Singleton, MultiSig, BaseRegistry, address, address) {
+    function run() external returns (Singleton, MultiSig, BaseRegistry, address, uint256, address, MockV3Aggregator) {
         if (block.chainid != 31337) {
-            (Singleton _singleton, MultiSig multisig, BaseRegistry _registry, address _deployer, address _registrar) =
-                deployLive();
-            return (_singleton, multisig, _registry, _deployer, _registrar);
+            (
+                Singleton _singleton,
+                MultiSig multisig,
+                BaseRegistry _registry,
+                address _deployer,
+                uint256 key,
+                address _registrar,
+                MockV3Aggregator mockEth
+            ) = deployLive();
+            return (_singleton, multisig, _registry, _deployer, key, _registrar, mockEth);
         } else {
-            (Singleton _singleton, MultiSig multisig, BaseRegistry _registry, address _deployer, address _registrar) =
-                deploySingletonForTest();
-            return (_singleton, multisig, _registry, _deployer, _registrar);
+            (
+                Singleton _singleton,
+                MultiSig multisig,
+                BaseRegistry _registry,
+                address _deployer,
+                uint256 key,
+                address _registrar,
+                MockV3Aggregator mockEth
+            ) = deploySingletonForTest();
+            return (_singleton, multisig, _registry, _deployer, key, _registrar, mockEth);
         }
     }
 
-    function deploySingletonForTest() public broadcast returns (Singleton, MultiSig, BaseRegistry, address, address) {
+    function deploySingletonForTest()
+        public
+        broadcast
+        returns (Singleton, MultiSig, BaseRegistry, address, uint256, address, MockV3Aggregator)
+    {
+        MockV3Aggregator mockEth = new MockV3Aggregator(8, 2000e8);
         MultiSig multisig = new MultiSig();
         Singleton singleton = new Singleton(address(multisig));
-        BaseRegistry registry = new BaseRegistry(address(singleton));
-        return (singleton, multisig, registry, deployer, registrar);
+        BaseRegistry registry = new BaseRegistry(address(singleton), deployer, "@salva", address(mockEth));
+        multisig.setSingleton(address(singleton));
+        return (singleton, multisig, registry, deployer, deployerKey, registrar, mockEth);
     }
 
-    function deployLive() public broadcastLive returns (Singleton, MultiSig, BaseRegistry, address, address) {
+    function deployLive()
+        public
+        broadcastLive
+        returns (Singleton, MultiSig, BaseRegistry, address, uint256, address, MockV3Aggregator)
+    {
+        address dataFeed = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
+        address backend = 0xfD5A9828bac27495FAb7F6174b3de386E0554187;
         MultiSig multisig = new MultiSig();
         Singleton singleton = new Singleton(address(multisig));
-        BaseRegistry registry = new BaseRegistry(address(singleton));
+        BaseRegistry registry = new BaseRegistry(address(singleton), backend, "@salva", dataFeed);
+        MockV3Aggregator mockEth = new MockV3Aggregator(8, 2000e8);
 
         multisig.setSingleton(address(singleton));
         console.log("SINGETON", address(singleton));
         console.log("REGISTRY", address(registry));
         console.log("MULTISIG", address(multisig));
-        return (singleton, multisig, registry, msg.sender, msg.sender);
+        return (singleton, multisig, registry, msg.sender, 0, msg.sender, mockEth);
     }
 }

@@ -6,34 +6,53 @@ import {Storage} from "@Storage/Storage.sol";
 
 /**
  * @title NameLib
- * @notice Internal library for name normalization and cryptographic hashing.
- * @dev High-performance assembly for name-welding and anti-phishing normalization.
- * This version is namespace-aware; it identifies the namespace prefix to isolate the alias
- * from the namespace suffix during processing.
+ * @notice Core library for alias normalization, storage-key generation, and
+ *         ownership-indexed storage writes.
+ * @dev All hot paths use inline assembly for predictable gas costs and direct
+ *      memory control. No number-resolution logic exists in this contract —
+ *      aliases resolve exclusively to wallet addresses.
+ *
+ *      Exports (used by LinkName and UnlinkName):
+ *        · _computeNameHash        — keccak256 slot generation
+ *        · _normalizeAndValidate   — anti-phishing flip + character gating
+ *        · _checkCollision         — duplicate-registration guard
+ *        · _checkCaller            — ownership verification for unlink
+ *        · _performLinkToWallet    — forward + ownership storage write
+ *        · _performUnlink          — storage zeroing + ownership cleanup
  */
 abstract contract NameLib is Modifier, Storage {
     // ─────────────────────────────────────────────────────────────────────────
-    // FUNCTION 1 — NAME HASHING (Storage Slot Generation)
+    // STORAGE-KEY GENERATION
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Generates a unique keccak256 pointer by welding the name and namespace.
-     * @dev Uses assembly to mstore the namespace immediately after name bytes in memory.
-     * @param namespace The 16-byte namespace identifier.
-     * @param nameLength Length of the normalized name segment.
-     * @param fullLength Total length to hash (normalized name + namespace).
-     * @param storageCheck If 0, performs a collision check on the resulting hash.
+     * @notice Produces a unique keccak256 storage pointer by welding the
+     *         normalized name and the registry's namespace handle.
+     *
+     * @dev Memory layout after the weld:
+     *        [ 0x00 .. nameLength-1 ] normalized name bytes  (written by caller)
+     *        [ nameLength .. nameLength+15 ] namespace handle (written here)
+     *      keccak256 is then taken over the full `fullLength` byte window.
+     *
+     *      The name bytes at 0x00 are expected to have been written by
+     *      `_normalizeAndValidate` before this function is called.
+     *
+     * @param namespace_    The 16-byte namespace handle (e.g. `0x4073616c766100…`).
+     * @param nameLength    Byte length of the normalized name segment.
+     * @param fullLength    Total bytes to hash: `nameLength + namespaceLength`.
+     * @param storageCheck  Pass `0` to run a collision guard; any other value skips it.
+     * @return nameHash     The welded keccak256 storage key.
      */
-    function _computeNameHash(bytes16 namespace, uint256 nameLength, uint256 fullLength, uint256 storageCheck)
+    function _computeNameHash(bytes16 namespace_, uint256 nameLength, uint256 fullLength, uint256 storageCheck)
         internal
         view
         returns (bytes32 nameHash)
     {
-        assembly {
+        assembly ("memory-safe") {
             // STEP: APPEND NAMESPACE
             // mstore at the offset of nameLength creates a contiguous byte array:
             // [ name_data ][ namespace ]
-            mstore(add(0x00, nameLength), namespace)
+            mstore(add(0x00, nameLength), namespace_)
 
             // STEP: GENERATE SLOT KEY
             // we are not following normal hashing with slot.
@@ -47,15 +66,38 @@ abstract contract NameLib is Modifier, Storage {
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // NAME NORMALIZATION + VALIDATION
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
-     * @notice Normalizes split names and strips namespaces for deterministic storage.
-     * @dev Handles "charles_okoronkwo" vs "okoronkwo_charles" by sorting segments.
-     * It is now robust enough to handle full handles by terminating
-     * segment capture when the namespace prefix (0x40) character is detected.
-     * @param length Input length of the raw name or full handle.
-     * @param nameToBytes The raw bytes32 representation of the name.
-     * @param mark Flag to toggle strict character validation (0 for link, 1 for view/unlink).
-     * @return processedLength The length of the final normalized name segment.
+     * @notice Normalizes an alias and validates its character set, then writes
+     *         the canonical form into memory at `0x00` for subsequent hashing.
+     *
+     * @dev Anti-phishing guarantee: aliases that contain exactly one underscore
+     *      are split into two segments and reconstructed in ascending
+     *      lexicographic order.  This means `charles_okoronkwo` and
+     *      `okoronkwo_charles` produce identical memory output and therefore
+     *      the same storage key — preventing look-alike squatting.
+     *
+     *      Namespace-aware termination: if a `namespace prefix` byte (0x40) is detected as the
+     *      next character, the loop terminates immediately and only the name
+     *      segment is processed.  This makes the function safe to
+     *      call with full handles from view/unlink paths.
+     *
+     *      Character rules enforced when `mark == 0` (link / write path):
+     *        · a–z  (0x61–0x7a)
+     *        · 2–9  (0x32–0x39)
+     *        · `_`  (0x5f) — maximum one occurrence
+     *        · digits 0, 1 and all uppercase letters are rejected
+     *
+     *      When `mark == 1` (unlink / view path) character validation is skipped
+     *      so the canonical key can be reconstructed without re-gating.
+     *
+     * @param length        Byte length of `nameToBytes` (or the full handle).
+     * @param nameToBytes   Raw `bytes32` word loaded from calldata.
+     * @param mark          `0` → strict write-path validation; `1` → read/unlink path.
+     * @return processedLength  Byte length of the canonical name written to memory.
      */
     function _normalizeAndValidate(uint256 length, bytes32 nameToBytes, uint8 mark)
         internal
@@ -77,7 +119,7 @@ abstract contract NameLib is Modifier, Storage {
         for (uint256 i = 0; i < length;) {
             bytes1 char = nameToBytes[i];
             bytes1 next = nameToBytes[i + 1];
-            bytes1 loopLen = length - 1;
+            uint256 loopLen = length - 1;
 
             // ─────────────────────────────────────────────────────────────────
             // STEP 1 — CHARACTER VALIDATION (a-z, 2-9, _)
@@ -95,16 +137,16 @@ abstract contract NameLib is Modifier, Storage {
             // ─────────────────────────────────────────────────────────────────
             if (!isSplit) {
                 if (char != 0x5f) {
-                    assembly {
+                    assembly ("memory-safe") {
                         mstore(add(0x00, cursor), char)
                         cursor := add(cursor, 0x01)
                     }
                 }
-                // Finalize Segment 1 if end of string or namespace @ symbol detected
+                // Finalize Segment 1 if end of string or namespace prefix detected
                 // Cus this function is also called my a view function that take full name(with namespace)
-                // We stop the loop so a not to proceed to adding @namespace to the actual name
+                // We stop the loop so a not to proceed to adding namespace to the actual name
                 if (char == 0x5f || i == loopLen || next == 0x40) {
-                    assembly {
+                    assembly ("memory-safe") {
                         firstLength := cursor
                         // Extraction: Load segment and shift to high bits for 'upper/lower' check
                         firstPart := shr(sub(0x100, mul(firstLength, 0x08)), mload(0x00))
@@ -116,23 +158,23 @@ abstract contract NameLib is Modifier, Storage {
 
                     // New: calldata Length Manipulation Check
                     // Incase the wrong length is passed in raw calldata
-                    // We also check if not equal to '@', incase this is being called by a view function
+                    // We also check if not equal to 0x40 (namespace prefix), incase this is being called by a view function
                     // or unlink function, so this doesn't revert
-                    // This is robust enough that even if you pass charles@salva in the link function
-                    // It will stop the loop right before '@' and use only the name
+                    // This is robust enough that even if you pass name + namespace in the link function
+                    // It will stop the loop and use only the name
                     if (next > 0x00 && next != 0x40) {
                         revert Errors__Invalid_Length();
                     }
                 }
             } else {
-                assembly {
+                assembly ("memory-safe") {
                     mstore(add(0x00, cursor), char)
                     cursor := add(cursor, 0x01)
                 }
 
-                // Finalize Segment 1 if end of string or namespace @ symbol detected
+                // Finalize Segment 1 if end of string or namespace prefix detected
                 // Cus this function is also called my a view function that take full name(with namespace)
-                // We stop the loop so a not to proceed to adding @namespace to the actual name
+                // We stop the loop so a not to proceed to adding namespace to the actual name
                 if (i == loopLen || next == 0x40) {
                     // This is like a forward, makes i == length, so that i < length will be false and stop the loop
                     i = loopLen;
@@ -141,7 +183,7 @@ abstract contract NameLib is Modifier, Storage {
                         revert Errors__Invalid_Length();
                     }
 
-                    assembly {
+                    assembly ("memory-safe") {
                         secondLength := cursor
                         // Extraction: Load segment and shift to high bits for 'upper/lower' check
                         secondPart := shr(sub(0x100, mul(secondLength, 0x08)), mload(0x00))
@@ -171,7 +213,7 @@ abstract contract NameLib is Modifier, Storage {
             uint256 bigLen = firstPart > secondPart ? firstLength : secondLength;
             uint256 smlLen = firstPart > secondPart ? secondLength : firstLength;
 
-            assembly {
+            assembly ("memory-safe") {
                 // MEMORY REBUILD:
                 // 1. Store Upper Part (Left Aligned)
                 mstore(0x00, shl(sub(0x100, mul(bigLen, 0x08)), upper))
@@ -187,11 +229,13 @@ abstract contract NameLib is Modifier, Storage {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // STEP 4 — STORAGE ENGINE
+    // STORAGE ENGINE
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @dev Internal check to prevent overwriting existing name records.
+     * @notice Reverts if `nameHash` already maps to a non-zero value in storage.
+     * @dev Prevents overwriting an existing alias registration.
+     * @param nameHash The welded keccak256 key to inspect.
      */
     function _checkCollision(bytes32 nameHash) internal view {
         bytes32 storedValue;
@@ -201,11 +245,19 @@ abstract contract NameLib is Modifier, Storage {
         if (storedValue != bytes32(0)) revert Errors__Taken();
     }
 
-    // if the hash stored for this caller, is not the same as the nameHash
-    // Revert - name doesn't belong to the caller
-    // protects against unlinking another person name
+    /**
+     * @notice Verifies that `_sender` is the address that originally registered
+     *         `nameHash`, protecting against unauthorized unlinks.
+     * @dev The ownership index is stored as:
+     *        slot = keccak256(nameHash ++ _sender) → nameHash
+     *      If the stored value does not equal `nameHash` the caller does not
+     *      own the alias → REVERT.
+     * @param _sender   The EOA attempting the unlink operation.
+     * @param nameHash  The welded storage key of the alias to unlink.
+     * @return _senderHash  The ownership-index slot key (passed to `_performUnlink`).
+     */
     function _checkCaller(address _sender, bytes32 nameHash) internal view returns (bytes32 _senderHash) {
-        assembly {
+        assembly ("memory-safe") {
             mstore(0x00, nameHash)
             mstore(0x20, _sender)
             _senderHash := sload(keccak256(0x00, 0x40))
@@ -214,13 +266,20 @@ abstract contract NameLib is Modifier, Storage {
     }
 
     /**
-     * @dev Maps a name hash to a wallet address in storage.
+     * @notice Writes the alias-to-wallet binding and the ownership index to storage.
+     * @dev Two storage slots are written atomically:
+     *        sstore(nameHash, wallet)       — forward resolution
+     *        sstore(senderHash, nameHash)   — ownership index used by unlink
+     * @param nameHash  The welded keccak256 storage key.
+     * @param _wallet   The wallet address to bind to the alias.
+     * @param _sender   The registering user's EOA (used to build the ownership index).
+     * @return _isLinked `true` on success.
      */
     function _performLinkToWallet(bytes32 nameHash, address _wallet, address _sender)
         internal
         returns (bool _isLinked)
     {
-        assembly {
+        assembly ("memory-safe") {
             sstore(nameHash, _wallet) // Map Hash -> Address
             mstore(0x00, nameHash)
             mstore(0x20, _sender)
@@ -231,24 +290,11 @@ abstract contract NameLib is Modifier, Storage {
     }
 
     /**
-     * @dev Maps a name hash to a numeric value in storage.
-     */
-    function _performLinkToNumber(bytes32 nameHash, uint256 _number, address _sender)
-        internal
-        returns (bool _isLinked)
-    {
-        assembly {
-            sstore(nameHash, _number) // Map Hash -> Number
-            mstore(0x00, nameHash)
-            mstore(0x20, _sender)
-            let senderHash := keccak256(0x00, 0x40)
-            sstore(senderHash, nameHash)
-        }
-        _isLinked = true;
-    }
-
-    /**
-     * @dev Clears a name record from storage.
+     * @notice Zeroes both the alias-to-wallet slot and the ownership-index slot.
+     * @dev Triggers an EVM gas refund for each cleared storage slot.
+     * @param nameHash    The welded keccak256 key of the alias to remove.
+     * @param senderHash  The ownership-index slot key returned by `_checkCaller`.
+     * @return _isUnLinked `true` on success.
      */
     function _performUnlink(bytes32 nameHash, bytes32 senderHash) internal returns (bool _isUnLinked) {
         assembly {

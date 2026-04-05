@@ -4,13 +4,14 @@ pragma solidity ^0.8.30;
 import {Initialize} from "@Initialize/Initialize.sol";
 import {LinkName} from "@LinkName/LinkName.sol";
 import {UnlinkName} from "@UnlinkName/UnlinkName.sol";
+import {Price} from "@Price/Price.sol";
 
 /**
  * @title Singleton
  * @notice The primary entry point for SALVA's name-to-wallet/number infrastructure.
  * @dev Combines registry initialization, resolution, linking, and unlinking.
  */
-contract Singleton is Initialize, LinkName, UnlinkName {
+contract Singleton is Initialize, LinkName, UnlinkName, Price {
     // ─────────────────────────────────────────────────────────────────────────
     // PROTOCOL CONSTANTS
     // ─────────────────────────────────────────────────────────────────────────
@@ -54,4 +55,6 @@ contract Singleton is Initialize, LinkName, UnlinkName {
     // 3. UnlinkName: Handles the removal of alias bindings.
     // 4. Resolve:    (via Link/Unlink) Provides view functions for resolution.
     // ─────────────────────────────────────────────────────────────────────────
+
+    receive() external payable {}
 }
