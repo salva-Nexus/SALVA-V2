@@ -62,4 +62,10 @@ abstract contract Errors {
 
     /// @dev Calldata length can't be manipulated
     error Errors__Invalid_Length();
+
+    /// @dev Sender Must be the owner of the hash
+    error Errors__Invalid_Sender();
+
+    /// @dev if fee is not enough
+    error Errors__Not_Enough_Fee();
 }

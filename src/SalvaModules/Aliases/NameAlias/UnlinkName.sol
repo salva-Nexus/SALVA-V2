@@ -45,7 +45,7 @@ abstract contract UnlinkName is Resolve {
     // assembly { sstore(nameHash, 0x00) }
     // Effectively deletes the link to the address or number.
     // ─────────────────────────────────────────────────────────────────────────
-    function unlink(bytes calldata name) external returns (bool _isUnlinked) {
+    function unlink(bytes calldata name, address _sender) external returns (bool _isUnlinked) {
         // Action: Fetch the namespace belonging to the caller
         (bytes16 namespaceHandle, bytes1 namespaceLength) = namespace(sender());
         if (namespaceHandle == bytes16(0)) {
@@ -70,10 +70,12 @@ abstract contract UnlinkName is Resolve {
 
         // Action: Re-generate the welded storage key
         // storageCheck: 1 = Skipping collision check
-        bytes32 nameHash = _computeNameHash(namespaceHandle, nameLength, fullLength, 1);
+        bytes32 nameHash = _computeNameHash(namespaceHandle, processedNameLen, fullLength, 1);
+
+        bytes32 senderHash = _checkCaller(_sender, nameHash);
 
         // Action: Execute storage deletion
         // Diagram: Sstore(nameHash, 0x00) -> Frees slot & triggers gas refund
-        _isUnlinked = _performUnlink(nameHash);
+        _isUnlinked = _performUnlink(nameHash, senderHash);
     }
 }

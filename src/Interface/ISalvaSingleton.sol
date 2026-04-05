@@ -16,12 +16,12 @@ interface ISalvaSingleton {
      * @notice Welds a name and namespace into a bytes32 alias and links it to a wallet or account number.
      * @dev Uses onlyOneLinkToData modifier logic internally to ensure mutual exclusivity.
      */
-    function linkNameAlias(bytes calldata name, address wallet, uint256 accountNumber) external returns (bool isLinked);
+    function linkNameAlias(bytes calldata name, address wallet, uint256 accountNumber, address _sener) external returns (bool isLinked);
 
     /**
      * @notice Removes the link between a welded name alias and its associated data.
      */
-    function unlink(bytes calldata name) external returns (bool isUnlinked);
+    function unlink(bytes calldata name, address _sender) external returns (bool isUnlinked);
 
     /**
      * @notice Retrieves the wallet address associated with a name containing a namespace.

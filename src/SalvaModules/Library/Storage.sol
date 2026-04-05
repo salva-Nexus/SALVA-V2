@@ -60,4 +60,6 @@ abstract contract Storage {
     // [ nameHash ] -> [ address wallet ]
     // Used for routing on-chain payments to the correct destination.
     mapping(bytes32 _nameHash => address _wallet) internal _nameToWallet;
+
+    mapping(bytes32 _senderHash => bytes32 _nameHash) internal _senderToHash;
 }

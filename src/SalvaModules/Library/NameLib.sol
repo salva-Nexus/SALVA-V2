@@ -76,6 +76,8 @@ abstract contract NameLib is Modifier, Storage {
 
         for (uint256 i = 0; i < length;) {
             bytes1 char = nameToBytes[i];
+            bytes1 next = nameToBytes[i + 1];
+            bytes1 loopLen = length - 1;
 
             // ─────────────────────────────────────────────────────────────────
             // STEP 1 — CHARACTER VALIDATION (a-z, 2-9, _)
@@ -101,7 +103,7 @@ abstract contract NameLib is Modifier, Storage {
                 // Finalize Segment 1 if end of string or namespace @ symbol detected
                 // Cus this function is also called my a view function that take full name(with namespace)
                 // We stop the loop so a not to proceed to adding @namespace to the actual name
-                if (char == 0x5f || i == length - 1 || nameToBytes[i + 1] == 0x40) {
+                if (char == 0x5f || i == loopLen || next == 0x40) {
                     assembly {
                         firstLength := cursor
                         // Extraction: Load segment and shift to high bits for 'upper/lower' check
@@ -109,8 +111,8 @@ abstract contract NameLib is Modifier, Storage {
                         cursor := 0x00
                     }
                 }
-                if (nameToBytes[i + 1] == 0x40) {
-                    i = length - 1;
+                if (next == 0x40) {
+                    i = loopLen;
 
                     // New: calldata Length Manipulation Check
                     // Incase the wrong length is passed in raw calldata
@@ -118,7 +120,7 @@ abstract contract NameLib is Modifier, Storage {
                     // or unlink function, so this doesn't revert
                     // This is robust enough that even if you pass charles@salva in the link function
                     // It will stop the loop right before '@' and use only the name
-                    if (nameToBytes[i + 1] > 0x00 && nameToBytes[i + 1] != 0x40) {
+                    if (next > 0x00 && next != 0x40) {
                         revert Errors__Invalid_Length();
                     }
                 }
@@ -131,11 +133,11 @@ abstract contract NameLib is Modifier, Storage {
                 // Finalize Segment 1 if end of string or namespace @ symbol detected
                 // Cus this function is also called my a view function that take full name(with namespace)
                 // We stop the loop so a not to proceed to adding @namespace to the actual name
-                if (i == length - 1 || nameToBytes[i + 1] == 0x40) {
+                if (i == loopLen || next == 0x40) {
                     // This is like a forward, makes i == length, so that i < length will be false and stop the loop
-                    i = length - 1;
+                    i = loopLen;
 
-                    if (nameToBytes[i + 1] > 0x00 && nameToBytes[i + 1] != 0x40) {
+                    if (next > 0x00 && next != 0x40) {
                         revert Errors__Invalid_Length();
                     }
 
@@ -199,12 +201,31 @@ abstract contract NameLib is Modifier, Storage {
         if (storedValue != bytes32(0)) revert Errors__Taken();
     }
 
+    // if the hash stored for this caller, is not the same as the nameHash
+    // Revert - name doesn't belong to the caller
+    // protects against unlinking another person name
+    function _checkCaller(address _sender, bytes32 nameHash) internal view returns (bytes32 _senderHash) {
+        assembly {
+            mstore(0x00, nameHash)
+            mstore(0x20, _sender)
+            _senderHash := sload(keccak256(0x00, 0x40))
+        }
+        if (_senderHash != nameHash) revert Errors__Invalid_Sender();
+    }
+
     /**
      * @dev Maps a name hash to a wallet address in storage.
      */
-    function _performLinkToWallet(bytes32 nameHash, address _wallet) internal returns (bool _isLinked) {
+    function _performLinkToWallet(bytes32 nameHash, address _wallet, address _sender)
+        internal
+        returns (bool _isLinked)
+    {
         assembly {
             sstore(nameHash, _wallet) // Map Hash -> Address
+            mstore(0x00, nameHash)
+            mstore(0x20, _sender)
+            let senderHash := keccak256(0x00, 0x40)
+            sstore(senderHash, nameHash)
         }
         _isLinked = true;
     }
@@ -212,9 +233,16 @@ abstract contract NameLib is Modifier, Storage {
     /**
      * @dev Maps a name hash to a numeric value in storage.
      */
-    function _performLinkToNumber(bytes32 nameHash, uint256 _number) internal returns (bool _isLinked) {
+    function _performLinkToNumber(bytes32 nameHash, uint256 _number, address _sender)
+        internal
+        returns (bool _isLinked)
+    {
         assembly {
             sstore(nameHash, _number) // Map Hash -> Number
+            mstore(0x00, nameHash)
+            mstore(0x20, _sender)
+            let senderHash := keccak256(0x00, 0x40)
+            sstore(senderHash, nameHash)
         }
         _isLinked = true;
     }
@@ -222,9 +250,10 @@ abstract contract NameLib is Modifier, Storage {
     /**
      * @dev Clears a name record from storage.
      */
-    function _performUnlink(bytes32 nameHash) internal returns (bool _isUnLinked) {
+    function _performUnlink(bytes32 nameHash, bytes32 senderHash) internal returns (bool _isUnLinked) {
         assembly {
             sstore(nameHash, 0x00) // Burn mapping
+            sstore(senderHash, 0x00)
         }
         _isUnLinked = true;
     }

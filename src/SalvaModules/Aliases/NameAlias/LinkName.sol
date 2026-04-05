@@ -43,8 +43,9 @@ abstract contract LinkName is Resolve {
     // if (wallet != 0) -> Sstore(nameHash, wallet)
     // else             -> Sstore(nameHash, number)
     // ─────────────────────────────────────────────────────────────────────────
-    function linkNameAlias(bytes calldata name, address wallet, uint256 number)
+    function linkNameAlias(bytes calldata name, address wallet, uint256 number, address _sender)
         external
+        payable
         onlyOneLinkToData
         returns (bool isLinked)
     {
@@ -72,11 +73,12 @@ abstract contract LinkName is Resolve {
 
         // Action: Generate the unique storage pointer (welded key)
         // storageCheck: 0 = Perform collision check to ensure name isn't "Taken"
-        bytes32 nameHash = _computeNameHash(namespaceHandle, nameLength, fullLength, 0);
+        bytes32 nameHash = _computeNameHash(namespaceHandle, processedNameLen, fullLength, 0);
 
         // Action: Determine link type and execute storage write
         // Diagram: [ nameHash ] -> { address } OR { uint256 }
-        isLinked =
-            wallet == address(0) ? _performLinkToNumber(nameHash, number) : _performLinkToWallet(nameHash, wallet);
+        isLinked = wallet == address(0)
+            ? _performLinkToNumber(nameHash, number, _sender)
+            : _performLinkToWallet(nameHash, wallet, _sender);
     }
 }

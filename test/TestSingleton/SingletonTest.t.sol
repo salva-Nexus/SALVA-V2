@@ -31,7 +31,7 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         singleton.initializeRegistry(address(registry), "@salva", bytes1(0x06));
     }
 
-    function test_linkName() external initialized {
+    function test_linkName() external initialized prank(EOA) {
         bytes memory _name = bytes("okoronkwo_"); // exactly 29 bytes
         registry.linkToWallet(_name, EOA);
         bytes memory name = bytes("okoronkwo_@salva");
@@ -45,7 +45,7 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         // console.log(num);
     }
 
-    function test_Unlink_Name() external initialized linkName {
+    function test_Unlink_Name() external initialized prank(EOA) linkName {
         address linked = registry.resolveAddress(bytes("charles@salva"));
         assertEq(linked, EOA);
         console.log(linked);
@@ -57,13 +57,14 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         console.log(unlinked);
     }
 
-    function test_Phishing_Resistance() external initialized {
+    function test_Phishing_Resistance() external initialized prank(EOA) {
         bytes memory _name = bytes("okoronkwo_charles");
         registry.linkToWallet(_name, EOA);
 
+        _changePrank(makeAddr("EOA2"));
         bytes memory _name0 = bytes(unicode"okoronkwо_charles");
         vm.expectRevert(Errors.Errors__Invalid_Character.selector);
-        registry.linkToWallet(_name0, EOA);
+        registry.linkToWallet(_name0, makeAddr("EOA2"));
 
         bytes memory _name1 = bytes("charles_okoronkwo"); // inverted
         vm.expectRevert(Errors.Errors__Taken.selector);
@@ -71,12 +72,12 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
 
         bytes memory _name2 = bytes("okoronkwo-charles");
         vm.expectRevert(Errors.Errors__Invalid_Character.selector);
-        registry.linkToWallet(_name2, EOA);
+        registry.linkToWallet(_name2, makeAddr("EOA2"));
     }
 
     function test_Enforce_Prefix() external prank(owner) {
         string memory IDENTIFIER = ".coinbase";
-        BaseRegistry reg = new BaseRegistry(address(singleton), owner);
+        BaseRegistry reg = new BaseRegistry(address(singleton));
 
         multisig.proposeInitialization(IDENTIFIER, address(reg));
         multisig.validateRegistry(address(reg));
@@ -86,27 +87,27 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         multisig.executeInit(address(reg));
     }
 
-    function test_Only_Registry_Can_Link() external initialized {
+    function test_Only_Registry_Can_Call_Singleton_Directly() external initialized {
         bytes memory _name = bytes("okoronkwo_charles");
         vm.expectRevert(Errors.Errors__Not_Registered.selector);
-        singleton.linkNameAlias(_name, EOA, 0);
+        singleton.linkNameAlias(_name, EOA, 0, makeAddr("EOA2"));
 
         vm.expectRevert(Errors.Errors__Not_Registered.selector);
-        singleton.linkNameAlias(_name, address(0), number);
+        singleton.linkNameAlias(_name, address(0), number, makeAddr("EOA2"));
     }
 
-    function test_Linked_Name_Cannot_Be_Reused() external initialized linkName {
+    function test_Linked_Name_Cannot_Be_Reused() external initialized prank(EOA) linkName {
         vm.expectRevert(Errors.Errors__Taken.selector);
         registry.linkToWallet(name, address(0x123));
     }
 
-    function test_Name_Not_Exceeding_32_Bytes() external initialized {
+    function test_Name_Not_Exceeding_32_Bytes() external initialized prank(EOA) {
         bytes memory _name = bytes("my_name_is_long_and_cause_this_to_revert");
         vm.expectRevert(Errors.Errors__Max_Name_Length_Exceeded.selector);
         registry.linkToWallet(_name, EOA);
     }
 
-    function test_Arbitrary() external initialized prank(address(registry)) {
+    function test_Arbitrary() external initialized prank(EOA) {
         // length manipulation, extra length
         // should revert, cus extra data is 0
         bytes memory data1 =
@@ -121,18 +122,21 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         (bool success2,) = address(singleton).call(data2);
         assertEq(success2, false);
 
-        // bytes memory data3 =
-        //     hex"b7151e5b0000000000000000000000000000000000000000000000000000000000000060000000000000000000000000C958B338b1cE6ADd8f9CcfB102905a59c28e91Fc000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000106f6b6f726f6e6b776f5f636861726c6573000000000000000000000000000000";
-        // (bool success3,) = address(singleton).call(data3);
-        // assertEq(success3, false);
-
-        bytes memory name = bytes("cboi");
+        bytes memory name = bytes("charles@coinbase");
         console.logBytes(name);
+    }
 
-        bytes memory name1 = bytes("salva_cboi@salva");
-        console.logBytes(name1);
+    function test_arbitrary_User_Cannot_Unlink_Another_User() external initialized prank(EOA) linkName {
+        _changePrank(makeAddr("EOA2")); 
 
-        bytes memory name2 = bytes("cboi_salva@salva");
-        console.logBytes(name2);
+        vm.expectRevert(Errors.Errors__Invalid_Sender.selector);
+        registry.unlink(name);
+
+        bytes memory weldedName = bytes("charles_test@salva");
+        assertNotEq(registry.resolveAddress(weldedName), address(0));
+        _changePrank(EOA);
+        registry.unlink(bytes("charles_test"));
+
+        assertEq(registry.resolveAddress(weldedName), address(0));
     }
 }

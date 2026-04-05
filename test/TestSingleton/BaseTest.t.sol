@@ -23,14 +23,13 @@ abstract contract BaseTest is Test {
         multisig.validateRegistry(address(registry));
         vm.warp(block.timestamp + 48 hours);
         multisig.executeInit(address(registry));
-        _changePrank(address(registrar));
         _;
         _stopPrank();
     }
 
     modifier initializedRegistry2() {
         _changePrank(owner);
-        BaseRegistry reg = new BaseRegistry(address(singleton), owner);
+        BaseRegistry reg = new BaseRegistry(address(singleton));
         multisig.proposeInitialization("@coinbase", address(reg));
         multisig.validateRegistry(address(reg));
         vm.warp(block.timestamp + 48 hours);
@@ -54,7 +53,8 @@ abstract contract BaseTest is Test {
     }
 
     modifier linkName() {
-        registry.linkToWallet(name, EOA);
+        bytes memory weldedName = bytes("charles_test@salva");
+        registry.linkToWallet(weldedName, EOA);
         _;
     }
 

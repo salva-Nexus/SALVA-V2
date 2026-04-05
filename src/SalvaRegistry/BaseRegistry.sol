@@ -3,37 +3,25 @@ pragma solidity ^0.8.30;
 
 import {Context} from "@Context/Context.sol";
 import {ISalvaSingleton} from "@ISalvaSingleton/ISalvaSingleton.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract BaseRegistry is AccessControl, Context {
+contract BaseRegistry is Context {
     address internal immutable SINGLETON;
     string internal constant NAMESPACE = "@salva";
-    bytes32 private constant REGISTRAR_ROLE = keccak256("REGISTRAR");
 
-    constructor(address _singleton, address _registrar) {
+    constructor(address _singleton) {
         SINGLETON = _singleton;
-        _grantRole(DEFAULT_ADMIN_ROLE, sender());
-        grantRole(REGISTRAR_ROLE, _registrar);
     }
 
-    function linkToWallet(bytes calldata _name, address _wallet)
-        external
-        onlyRole(REGISTRAR_ROLE)
-        returns (bool _isSuccess)
-    {
-        _isSuccess = ISalvaSingleton(SINGLETON).linkNameAlias(_name, _wallet, 0);
+    function linkToWallet(bytes calldata _name, address _wallet) external returns (bool _isSuccess) {
+        _isSuccess = ISalvaSingleton(SINGLETON).linkNameAlias(_name, _wallet, 0, sender());
     }
 
-    function linkToNumber(bytes calldata _name, uint256 _number)
-        external
-        onlyRole(REGISTRAR_ROLE)
-        returns (bool _isSuccess)
-    {
-        _isSuccess = ISalvaSingleton(SINGLETON).linkNameAlias(_name, address(0), _number);
+    function linkToNumber(bytes calldata _name, uint256 _number) external returns (bool _isSuccess) {
+        _isSuccess = ISalvaSingleton(SINGLETON).linkNameAlias(_name, address(0), _number, sender());
     }
 
-    function unlink(bytes calldata _name) external onlyRole(REGISTRAR_ROLE) returns (bool _isSuccess) {
-        _isSuccess = ISalvaSingleton(SINGLETON).unlink(_name);
+    function unlink(bytes calldata _name) external returns (bool _isSuccess) {
+        _isSuccess = ISalvaSingleton(SINGLETON).unlink(_name, sender());
     }
 
     function resolveAddress(bytes calldata _name) external view returns (address _addr) {
