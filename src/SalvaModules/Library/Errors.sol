@@ -15,7 +15,7 @@ abstract contract Errors {
     error Errors__Has_Validated();
 
     /// @dev The singleton reference is immutable once set.
-    error Errors__Singleton_Already_Set();
+    error Errors__Already_Set();
 
     /// @dev An active or completed proposal already exists for this registry.
     error Errors__Registry_Init_Proposed();
@@ -82,4 +82,7 @@ abstract contract Errors {
 
     /// @dev Supplied address is the zero address.
     error Errors__Invalid_Address();
+
+    /// @dev Registry clone has already been initialized — duplicate initialize call rejected.
+    error Errors__Initialized();
 }

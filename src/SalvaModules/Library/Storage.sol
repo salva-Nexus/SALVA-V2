@@ -24,7 +24,7 @@ abstract contract Storage {
      * @dev Immutable — baked directly into deployed runtime bytecode.
      *      Only this address may call `initializeRegistry`.
      */
-    address internal immutable _MULTISIG;
+    address internal _MULTISIG;
 
     // ─────────────────────────────────────────────────────────────────────────
     // NAMESPACE MANAGEMENT
@@ -75,4 +75,6 @@ abstract contract Storage {
      *      Value: bytes32 nameHash    (the welded alias storage key)
      */
     mapping(bytes32 _senderHash => bytes32 _nameHash) internal _senderToHash;
+
+    uint256[50] private_gap;
 }

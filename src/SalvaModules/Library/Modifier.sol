@@ -39,7 +39,11 @@ abstract contract Modifier is Errors, Context {
      * @param multiSig The expected MultiSig contract address.
      */
     modifier onlyMultiSig(address multiSig) {
-        if (sender() != multiSig) revert Errors__Not_Authorized();
+        _onlyMultiSig(multiSig);
         _;
+    }
+
+    function _onlyMultiSig(address multiSig) internal view {
+        if (sender() != multiSig) revert Errors__Not_Authorized();
     }
 }

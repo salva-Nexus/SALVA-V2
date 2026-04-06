@@ -3,6 +3,7 @@ pragma solidity ^0.8.30;
 
 import {BaseTest} from "@BaseTest/BaseTest.t.sol";
 import {DeploySingleton} from "../../script/DeploySingleton.s.sol";
+import {Singleton} from "@Singleton/Singleton.sol";
 import {BaseRegistry} from "@BaseRegistry/BaseRegistry.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {TestMultiSig} from "@TestMultiSig/TestMultiSig.t.sol";
@@ -12,7 +13,7 @@ import {MockV3Aggregator} from "@MockV3Aggregator/MockV3Aggregator.sol";
 contract TestSingleton is Test, BaseTest, TestMultiSig {
     function setUp() external {
         DeploySingleton deploy = new DeploySingleton();
-        (singleton, multisig, registry, owner, OWNERKEY, registrar, mockEth) = deploy.run();
+        (singleton, multisig, registry, owner, OWNERKEY, mockEth) = deploy.run();
 
         (EOA, EOAKEY) = makeAddrAndKey("EOA");
         address keyAddr = _rememberKey(EOAKEY);
@@ -38,7 +39,7 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         bytes memory _name = bytes("okoronkwo_charles");
         bytes memory sig = _computeSignature(_name, owner, owner);
         _changePrank(owner);
-        _link(_name, owner, sig, false, 0);
+        _link(_name, owner, sig, address(registry), false, 0);
 
         assertEq(address(singleton).balance, _getFee());
         assertEq(owner.balance, 5 ether - _getFee());
@@ -52,14 +53,14 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         bytes memory sig = _computeSignature(_name, EOA, EOA);
         bytes4 revertSelector = Errors.Errors__Invalid_Call_Source.selector;
         _changePrank(EOA);
-        _link(_name, EOA, sig, true, revertSelector);
+        _link(_name, EOA, sig, address(registry), true, revertSelector);
     }
 
     function test_Unlink_Name() external initialized {
         bytes memory _name = bytes("okoronkwo_charles");
         bytes memory sig = _computeSignature(_name, EOA, owner);
         _changePrank(EOA);
-        _link(_name, EOA, sig, false, 0);
+        _link(_name, EOA, sig, address(registry), false, 0);
         address linked = registry.resolveAddress(bytes("okoronkwo_charles@salva"));
         assertEq(linked, EOA);
         console.log(linked);
@@ -71,22 +72,22 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         console.log(unlinked);
     }
 
-    function test_Phishing_Resistance1() external initialized {
+    function test_Phishing_Resistance() external initialized {
         bytes memory _name = bytes("okoronkwo_charles");
         bytes memory sig = _computeSignature(_name, EOA, owner);
         _changePrank(EOA);
-        _link(_name, EOA, sig, false, 0);
+        _link(_name, EOA, sig, address(registry), false, 0);
 
         _changePrank(makeAddr("EOA2"));
         vm.deal(makeAddr("EOA2"), 5 ether);
         bytes memory _name0 = bytes(unicode"okoronkwо_charles");
         bytes memory sig0 = _computeSignature(_name0, makeAddr("EOA2"), owner);
         bytes4 revertSelector = Errors.Errors__Invalid_Character.selector;
-        _link(_name0, makeAddr("EOA2"), sig0, true, revertSelector);
+        _link(_name0, makeAddr("EOA2"), sig0, address(registry), true, revertSelector);
 
         bytes memory _name1 = bytes("okoronkwo-charles");
         bytes memory sig1 = _computeSignature(_name1, makeAddr("EOA2"), owner);
-        _link(_name1, makeAddr("EOA2"), sig1, true, revertSelector);
+        _link(_name1, makeAddr("EOA2"), sig1, address(registry), true, revertSelector);
     }
 
     function test_Only_Registry_Can_Call_Singleton_Directly() external initialized {
@@ -99,14 +100,14 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         bytes memory _name = bytes("okoronkwo_charles");
         bytes memory sig = _computeSignature(_name, owner, owner);
         _changePrank(owner);
-        _link(_name, owner, sig, false, 0);
+        _link(_name, owner, sig, address(registry), false, 0);
 
         _changePrank(EOA);
         bytes memory _name1 = bytes("okoronkwo_charles");
         bytes memory sig1 = _computeSignature(_name1, EOA, owner);
         bytes4 expectedRevert = Errors.Errors__Taken.selector;
         _changePrank(EOA);
-        _link(_name1, EOA, sig1, true, expectedRevert);
+        _link(_name1, EOA, sig1, address(registry), true, expectedRevert);
     }
 
     function test_Name_Not_Exceeding_32_Bytes() external initialized {
@@ -114,7 +115,7 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         bytes memory sig = _computeSignature(_name, owner, owner);
         bytes4 expectedRevert = Errors.Errors__Max_Name_Length_Exceeded.selector;
         _changePrank(owner);
-        _link(_name, owner, sig, true, expectedRevert);
+        _link(_name, owner, sig, address(registry), true, expectedRevert);
     }
 
     function test_Arbitrary() external initialized {
@@ -140,10 +141,35 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         bytes memory _name = bytes("okoronkwo_charles");
         bytes memory sig = _computeSignature(_name, owner, owner);
         _changePrank(owner);
-        _link(_name, owner, sig, false, 0);
+        _link(_name, owner, sig, address(registry), false, 0);
 
         _changePrank(EOA);
         vm.expectRevert(Errors.Errors__Invalid_Sender.selector);
         registry.unlink(_name);
+    }
+
+    function test_Upgrade() external initialized {
+        bytes memory _name = bytes("okoronkwo_charles");
+        bytes memory sig = _computeSignature(_name, owner, owner);
+        _changePrank(owner);
+        _link(_name, owner, sig, address(registry), false, 0);
+
+        multisig.upgradeSingleton(payable(address(new Singleton())), "");
+
+        bytes memory _name1 = bytes("okoronkwo_buchi");
+        bytes memory sig1 = _computeSignature(_name1, EOA, owner);
+        _changePrank(EOA);
+        _link(_name1, EOA, sig1, address(registry), false, 0);
+
+        assertEq(registry.resolveAddress(bytes("okoronkwo_charles@salva")), owner);
+        assertEq(registry.resolveAddress(bytes("okoronkwo_buchi@salva")), EOA);
+    }
+
+    function test_Upgrade2() external initialized {
+        // Only Multi-Sig
+        Singleton singleton2 = new Singleton();
+        _changePrank(EOA);
+        vm.expectRevert(Errors.Errors__Not_Authorized.selector);
+        multisig.upgradeSingleton(payable(address(singleton2)), "");
     }
 }

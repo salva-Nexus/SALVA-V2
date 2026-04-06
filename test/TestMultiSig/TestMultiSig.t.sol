@@ -3,6 +3,8 @@ pragma solidity ^0.8.30;
 
 import {BaseTest} from "@BaseTest/BaseTest.t.sol";
 import {Errors} from "@Errors/Errors.sol";
+import {console} from "forge-std/Test.sol";
+import {BaseRegistry} from "@BaseRegistry/BaseRegistry.sol";
 
 abstract contract TestMultiSig is BaseTest {
     function test_Only_Active_Validator_Can_Propose() external {
@@ -26,6 +28,7 @@ abstract contract TestMultiSig is BaseTest {
         multisig.proposeValidatorUpdate(makeAddr("val"), true);
         multisig.proposeValidatorUpdate(makeAddr("val1"), true);
         multisig.proposeValidatorUpdate(makeAddr("val2"), true);
+
         assertEq(multisig._validatorValidationCountRemains(makeAddr("val")), 1);
         multisig.validateValidator(makeAddr("val"));
         assertEq(multisig._validatorValidationCountRemains(makeAddr("val")), 0);
@@ -40,6 +43,7 @@ abstract contract TestMultiSig is BaseTest {
         assertEq(multisig._validatorValidationCountRemains(makeAddr("val2")), 0);
         vm.warp(block.timestamp + 48 hours);
         multisig.executeUpdateValidator(makeAddr("val2"));
+
         // new proposal to test threshold
         multisig.proposeValidatorUpdate(makeAddr("val3"), true);
         assertEq(multisig._validatorValidationCountRemains(makeAddr("val3")), 2);
@@ -79,5 +83,77 @@ abstract contract TestMultiSig is BaseTest {
         multisig.executeInit(address(registry));
         vm.expectRevert(Errors.Error__Invalid_Or_Not_Enough_Time.selector);
         multisig.executeUpdateValidator(makeAddr("val"));
+    }
+
+    function test_Only_Validator_Can_Update_Recovery_Singleton_And_Signer(address _random) external {
+        vm.assume(_random != owner);
+        _changePrank(_random);
+        vm.expectRevert(abi.encodeWithSelector(Errors.Errors__Not_Authorized.selector));
+        multisig.updateRecovery(EOA, true);
+
+        vm.expectRevert(abi.encodeWithSelector(Errors.Errors__Not_Authorized.selector));
+        multisig.upgradeSingleton(makeAddr("new impl"), "");
+
+        vm.expectRevert(abi.encodeWithSelector(Errors.Errors__Not_Authorized.selector));
+        multisig.updateSigner(makeAddr("new signer"));
+    }
+
+    function test_deploy_Clones() external {
+        _changePrank(owner);
+        address coinbaseReg = multisig.deployAndProposeInit("@coinbase");
+        address metamaskReg = multisig.deployAndProposeInit("@metamask");
+
+        multisig.validateRegistry(coinbaseReg);
+        multisig.validateRegistry(metamaskReg);
+
+        vm.warp(block.timestamp + 48 hours);
+        multisig.executeInit(coinbaseReg);
+        vm.warp(block.timestamp + 48 hours);
+        multisig.executeInit(metamaskReg);
+
+        (bytes16 expectCoinbase,) = singleton.namespace(coinbaseReg);
+        (bytes16 expectMetamask,) = singleton.namespace(metamaskReg);
+        // forge-lint: disable-next-line(unsafe-typecast)
+        assertEq(expectCoinbase, bytes16(bytes("@coinbase")));
+        // forge-lint: disable-next-line(unsafe-typecast)
+        assertEq(expectMetamask, bytes16(bytes("@metamask")));
+
+        console.log(coinbaseReg);
+        console.log(metamaskReg);
+    }
+
+    function test_New_Clones() external {
+        _changePrank(owner);
+        address coinbaseReg = multisig.deployAndProposeInit("@coinbase");
+        address metamaskReg = multisig.deployAndProposeInit("@metamask");
+
+        multisig.validateRegistry(coinbaseReg);
+        multisig.validateRegistry(metamaskReg);
+
+        vm.warp(block.timestamp + 48 hours);
+        multisig.executeInit(coinbaseReg);
+        vm.warp(block.timestamp + 48 hours);
+        multisig.executeInit(metamaskReg);
+
+        address user1 = makeAddr("oc");
+        address user2 = makeAddr("oj");
+        vm.deal(user1, 5 ether);
+        vm.deal(user2, 5 ether);
+
+        bytes memory signature1 = _computeSignature(bytes("okoronkwo_charles"), user1, owner);
+        bytes memory signature2 = _computeSignature(bytes("okoronkwo_joe"), user2, owner);
+
+        _changePrank(user1);
+        _link(bytes("okoronkwo_charles"), user1, signature1, coinbaseReg, false, 0);
+
+        _changePrank(user2);
+        _link(bytes("okoronkwo_joe"), user2, signature2, metamaskReg, false, 0);
+
+        assertEq(BaseRegistry(coinbaseReg).resolveAddress("okoronkwo_charles@coinbase"), user1);
+        assertEq(BaseRegistry(coinbaseReg).resolveAddress("charles_okoronkwo@coinbase"), user1);
+        assertNotEq(BaseRegistry(coinbaseReg).resolveAddress("okoronkwo_charles@metamask"), user1);
+        assertEq(BaseRegistry(metamaskReg).resolveAddress("okoronkwo_joe@metamask"), user2);
+        assertEq(BaseRegistry(metamaskReg).resolveAddress("joe_okoronkwo@metamask"), user2);
+        assertNotEq(BaseRegistry(coinbaseReg).resolveAddress("okoronkwo_joe@coinbase"), user2);
     }
 }

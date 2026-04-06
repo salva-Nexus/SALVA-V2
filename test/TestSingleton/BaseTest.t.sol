@@ -27,7 +27,6 @@ abstract contract BaseTest is Test {
     modifier initialized() {
         // MultiSig Validation
         _changePrank(owner);
-        multisig.proposeInitialization("@salva", address(registry));
         multisig.validateRegistry(address(registry));
         vm.warp(block.timestamp + 48 hours);
         multisig.executeInit(address(registry));
@@ -35,20 +34,9 @@ abstract contract BaseTest is Test {
         _stopPrank();
     }
 
-    // modifier initializedRegistry2() {
-    //     _changePrank(owner);
-    //     BaseRegistry reg = new BaseRegistry(address(singleton));
-    //     multisig.proposeInitialization("@coinbase", address(reg));
-    //     multisig.validateRegistry(address(reg));
-    //     vm.warp(block.timestamp + 48 hours);
-    //     multisig.executeInit(address(reg));
-    //     _;
-    //     _stopPrank();
-    // }
-
     modifier proposeInit() {
         _changePrank(owner);
-        multisig.proposeInitialization("@coinbase", address(registry));
+        multisig.deployAndProposeInit("@coinbase");
         _;
         _stopPrank();
     }
@@ -98,15 +86,20 @@ abstract contract BaseTest is Test {
         _signature = abi.encodePacked(r, s, v);
     }
 
-    function _link(bytes memory _name, address _wallet, bytes memory _signature, bool _eRevert, bytes4 _revertSelector)
-        internal
-    {
+    function _link(
+        bytes memory _name,
+        address _wallet,
+        bytes memory _signature,
+        address _registry,
+        bool _eRevert,
+        bytes4 _revertSelector
+    ) internal {
         bytes memory data = abi.encodeWithSelector(registry.link.selector, _name, _wallet, _signature);
         uint256 fee = _getFee();
         if (_eRevert) {
             vm.expectRevert(_revertSelector);
         }
-        (bool success,) = address(registry).call{value: fee}(data);
+        (bool success,) = _registry.call{value: fee}(data);
         console.log(success);
     }
 }

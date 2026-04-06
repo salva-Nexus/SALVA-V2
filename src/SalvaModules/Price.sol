@@ -29,6 +29,7 @@ abstract contract Price is Errors {
         if (answer <= 0 || block.timestamp - updatedAt > 2 hours) {
             revert Errors__Invalid_price();
         }
+        // forge-lint: disable-next-line(unsafe-typecast)
         return 1e26 / uint256(answer);
     }
 }

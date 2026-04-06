@@ -9,9 +9,7 @@ abstract contract MultiSigModifier is Errors, MultiSigStorage, Context {
     // Restricts function access to active validators only.
     // Pass _isValidator[sender()] as the argument.
     modifier onlyValidators() {
-        if (!_isValidator[sender()]) {
-            revert Errors__Not_Authorized();
-        }
+        _onlyValidators();
         _;
     }
 
@@ -41,5 +39,12 @@ abstract contract MultiSigModifier is Errors, MultiSigStorage, Context {
             }
         }
         _;
+    }
+
+    function _onlyValidators() internal view {
+        address _sender = sender();
+        if (!_isValidator[_sender] || _recovery[_sender]) {
+            revert Errors__Not_Authorized();
+        }
     }
 }

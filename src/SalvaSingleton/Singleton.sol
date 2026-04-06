@@ -5,13 +5,15 @@ import {Initialize} from "@Initialize/Initialize.sol";
 import {LinkName} from "@LinkName/LinkName.sol";
 import {UnlinkName} from "@UnlinkName/UnlinkName.sol";
 import {Price} from "@Price/Price.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 /**
  * @title Singleton
  * @notice The primary entry point for SALVA's name-to-wallet/number infrastructure.
  * @dev Combines registry initialization, resolution, linking, and unlinking.
  */
-contract Singleton is Initialize, LinkName, UnlinkName, Price {
+contract Singleton is Initializable, UUPSUpgradeable, Initialize, LinkName, UnlinkName, Price {
     // ─────────────────────────────────────────────────────────────────────────
     // PROTOCOL CONSTANTS
     // ─────────────────────────────────────────────────────────────────────────
@@ -33,7 +35,11 @@ contract Singleton is Initialize, LinkName, UnlinkName, Price {
      * 3. Cannot be updated.
      * * ─────────────────────────────────────────────────────────────────────────
      */
-    constructor(address _multiSig) {
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address _multiSig) external initializer {
         _MULTISIG = _multiSig;
     }
 
@@ -55,6 +61,8 @@ contract Singleton is Initialize, LinkName, UnlinkName, Price {
     // 3. UnlinkName: Handles the removal of alias bindings.
     // 4. Resolve:    (via Link/Unlink) Provides view functions for resolution.
     // ─────────────────────────────────────────────────────────────────────────
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyMultiSig(_MULTISIG) {}
 
     receive() external payable {}
 }
