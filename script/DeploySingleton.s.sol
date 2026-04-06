@@ -85,7 +85,8 @@ contract DeploySingleton is Script {
         broadcastLive
         returns (Singleton, MultiSig, BaseRegistry, address, uint256, MockV3Aggregator)
     {
-        address dataFeed = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
+        // address dataFeedMAINNET = 0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70; //base
+        address dataFeedTESTNET = 0x4aDC67696bA383F43DD60A9e78F2C97Fbbfc7cb1;
         address backend = 0xfD5A9828bac27495FAb7F6174b3de386E0554187;
 
         //============ MULTISIG============
@@ -100,13 +101,14 @@ contract DeploySingleton is Script {
 
         //============REGISTRY============
         RegistryFactory factory =
-            new RegistryFactory(address(new BaseRegistry()), address(wrappedMultiSig), dataFeed, backend);
+            new RegistryFactory(address(new BaseRegistry()), address(wrappedMultiSig), dataFeedTESTNET, backend);
         wrappedMultiSig.setSingletonAndFactory(address(wrappedSingleton), address(factory));
         // BaseRegistry registry = BaseRegistry(wrappedMultiSig.deployAndProposeInit("@salva"));
 
-        console.log("SINGETON", address(wrappedSingleton));
+        console.log("SINGETON: ", address(wrappedSingleton));
         //console.log("REGISTRY", address(registry));
-        console.log("MULTISIG", address(wrappedMultiSig));
+        console.log("MULTISIG: ", address(wrappedMultiSig));
+        console.log("FACTORY: ", address(factory));
         return
             (
                 wrappedSingleton,

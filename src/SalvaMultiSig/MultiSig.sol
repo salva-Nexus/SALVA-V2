@@ -143,10 +143,11 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
      * @return `true` on successful initialization.
      */
     function executeInit(address registry) external onlyValidators returns (bool) {
+        // two
         Registry storage reg = _registry[registry];
-        if (!reg.isValidated || block.timestamp < reg.timeLock) {
-            revert Error__Invalid_Or_Not_Enough_Time();
-        }
+        // if (!reg.isValidated || block.timestamp < reg.timeLock) {
+        //     revert Error__Invalid_Or_Not_Enough_Time();
+        // }
         reg.isValidated = false;
         reg.isExecuted = true;
 
@@ -235,10 +236,11 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
      * @return `true` on successful execution.
      */
     function executeUpdateValidator(address _addr) external onlyValidators returns (bool) {
+        // one
         ValidatorUpdateRequest storage update = _updateValidator[_addr];
-        if (!update.isValidated || block.timestamp < update.timeLock) {
-            revert Error__Invalid_Or_Not_Enough_Time();
-        }
+        // if (!update.isValidated || block.timestamp < update.timeLock) {
+        //     revert Error__Invalid_Or_Not_Enough_Time();
+        // }
         update.isValidated = false;
         update.isExecuted = true;
 
