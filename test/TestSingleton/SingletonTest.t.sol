@@ -187,9 +187,31 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         _changePrank(EOA);
         _link(_name2, EOA, sig2, address(registry), true, revertSelector);
 
-
         bytes memory _name3 = bytes("okoronkwo_ben");
         bytes memory sig3 = _computeSignature(_name3, EOA, EOA);
         _link(_name3, EOA, sig3, address(registry), false, 0);
+    }
+
+    function test_Withdrawal() external initialized {
+        bytes memory _name = bytes("okoronkwo_charles");
+        bytes memory sig = _computeSignature(_name, owner, owner);
+        _changePrank(owner);
+        _link(_name, owner, sig, address(registry), false, 0);
+
+        bytes memory _name2 = bytes("okoronkwo_joe");
+        bytes memory sig2 = _computeSignature(_name2, EOA, owner);
+        _changePrank(EOA);
+        _link(_name2, EOA, sig2, address(registry), false, 0);
+
+        assertEq(address(singleton).balance, _getFee() * 2);
+
+        vm.expectRevert(Errors.Errors__Not_Authorized.selector);
+        multisig.withdrawEth(makeAddr("reciever"));
+
+        _changePrank(owner);
+        multisig.withdrawEth(makeAddr("reciever"));
+
+        assertEq(makeAddr("reciever").balance, _getFee() * 2);
+        assertEq(address(singleton).balance, 0);
     }
 }

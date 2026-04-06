@@ -53,6 +53,14 @@ contract Singleton is Initializable, UUPSUpgradeable, Initialize, LinkName, Unli
         return _VERSION;
     }
 
+    function withdraw(address _receiver) external onlyMultiSig(_MULTISIG) {
+        uint256 balance = address(this).balance;
+        if (balance > 0) {
+            (bool success,) = _receiver.call{value: address(this).balance}("");
+            require(success);
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // INHERITED CAPABILITIES (Summary)
     // ─────────────────────────────────────────────────────────────────────────

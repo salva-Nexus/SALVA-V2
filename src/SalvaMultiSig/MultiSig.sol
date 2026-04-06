@@ -342,6 +342,10 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
         return true;
     }
 
+    function withdrawEth(address _receiver) external onlyValidators {
+        ISalvaSingleton(_salvaSingleton).withdraw(_receiver);
+    }
+
     /// @dev UUPS upgrade authorization — restricted to active validators.
     function _authorizeUpgrade(address newImplementation) internal override onlyValidators {}
 }

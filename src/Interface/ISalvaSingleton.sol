@@ -62,6 +62,8 @@ interface ISalvaSingleton {
      */
     function unlink(bytes calldata name, address _sender) external returns (bool isUnlinked);
 
+    function withdraw(address receiver) external;
+
     // ─────────────────────────────────────────────────────────────────────────
     // RESOLUTION
     // ─────────────────────────────────────────────────────────────────────────
