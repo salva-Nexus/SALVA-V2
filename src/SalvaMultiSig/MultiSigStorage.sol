@@ -20,15 +20,13 @@ abstract contract MultiSigStorage {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Mandatory delay between proposal validation and execution (48 hours).
+     * @notice Mandatory delay between proposal validation and execution (24 hours).
      * @dev Baked into bytecode as a constant — no storage slot consumed.
      *      All registry and validator proposals must wait this duration after
      *      quorum is reached before `execute` can be called.
      *
-     *      Timing diagram:
-     *        [ Quorum Reached ] + [ 172,800 seconds ] = [ Earliest Execution Timestamp ]
      */
-    uint128 internal constant _TIME_INTERVAL = 48 hours;
+    uint128 internal constant _TIME_INTERVAL = 24 hours;
 
     // ─────────────────────────────────────────────────────────────────────────
     // PROTOCOL ADDRESSES

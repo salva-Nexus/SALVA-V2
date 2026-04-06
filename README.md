@@ -53,7 +53,7 @@ Registration is a one-time fee of **$1 USD** paid in ETH, priced live via Chainl
 
 ### 1. The Verification (Guardians)
 
-Before an app can start naming its users, it must be approved. Salva uses a **48-hour security window** for every new namespace registration. This delay allows validators to detect and block fraudulent or malicious namespace claims before they are finalized on-chain.
+Before an app can start naming its users, it must be approved. Salva uses a **24-hour security window** for every new namespace registration. This delay allows validators to detect and block fraudulent or malicious namespace claims before they are finalized on-chain.
 
 ### 2. The App Gateways (Registries)
 
