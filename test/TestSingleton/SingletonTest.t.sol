@@ -172,4 +172,24 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         vm.expectRevert(Errors.Errors__Not_Authorized.selector);
         multisig.upgradeSingleton(payable(address(singleton2)), "");
     }
+
+    function test_updateSigner() external initialized {
+        bytes memory _name = bytes("okoronkwo_charles");
+        bytes memory sig = _computeSignature(_name, owner, owner);
+        _changePrank(owner);
+        _link(_name, owner, sig, address(registry), false, 0);
+
+        multisig.updateSigner(EOA);
+
+        bytes memory _name2 = bytes("okoronkwo_joe");
+        bytes memory sig2 = _computeSignature(_name2, EOA, owner);
+        bytes4 revertSelector = Errors.Errors__Invalid_Call_Source.selector;
+        _changePrank(EOA);
+        _link(_name2, EOA, sig2, address(registry), true, revertSelector);
+
+
+        bytes memory _name3 = bytes("okoronkwo_ben");
+        bytes memory sig3 = _computeSignature(_name3, EOA, EOA);
+        _link(_name3, EOA, sig3, address(registry), false, 0);
+    }
 }
