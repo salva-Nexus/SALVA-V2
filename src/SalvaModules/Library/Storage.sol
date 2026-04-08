@@ -4,25 +4,16 @@ pragma solidity ^0.8.30;
 /**
  * @title Storage
  * @notice Base storage layout for the Salva singleton.
- * @dev Defines all persistent mappings and structs used across the protocol.
- *      Aliases resolve exclusively to wallet addresses — number resolution
- *      is not supported in this version.
- *
- *      Storage hygiene:
- *        · The MultiSig address is `immutable` — baked into runtime bytecode,
- *          no storage slot consumed.
- *        · All alias mappings use keccak256 welded keys (name + namespace) as
- *          slot identifiers, providing collision-resistant namespace isolation.
+ * @dev Defines persistent mappings and structs for Account Abstraction namespacing.
  */
 abstract contract Storage {
     // ─────────────────────────────────────────────────────────────────────────
-    // IMMUTABLE PROTOCOL ACCESS
+    // IMMUTABLE / INTERNAL ACCESS (Slots 0+)
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
      * @notice The Salva MultiSig contract address.
-     * @dev Immutable — baked directly into deployed runtime bytecode.
-     *      Only this address may call `initializeRegistry`.
+     * @dev Only this address may call `initializeRegistry`.
      */
     address internal _MULTISIG;
 
@@ -32,49 +23,48 @@ abstract contract Storage {
 
     /**
      * @notice Tracks which namespace handles have been claimed.
-     * @dev Prevents two different registry contracts from claiming the same
-     *      namespace identifier (namespace hijacking).
-     *
-     *      Key:   bytes16 handle
-     *      Value: bool            `true` once the namespace is finalized
+     * @dev Key: bytes16 handle | Value: bool status.
      */
     mapping(bytes16 _namespace => bool _initialized) internal _isInitialized;
 
     /**
-     * @notice Maps each registry address to its assigned namespace handle and length.
-     * @dev Read by the singleton during every `linkNameAlias` and `unlink` call
-     *      to determine which namespace the calling registry owns.
-     *
-     *      Key:   address registry
-     *      Value: Namespace { bytes16 handle, bytes1 length }
+     * @notice Maps registry addresses to their assigned namespace metadata.
+     * @dev Key: address registry | Value: Namespace { handle, length }.
      */
     mapping(address _registry => Namespace _namespace) internal _registryNamespace;
 
-    /**
-     * @notice Packs a namespace handle with its byte length for gas-efficient reads.
-     * @dev Packed layout: [ bytes16 _namespace ][ bytes1 _length ]
-     *      Stored as a single cold-read struct in `_registryNamespace`.
-     */
     struct Namespace {
         bytes16 _namespace;
         bytes1 _length;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // ALIAS RESOLUTION MAPPINGS
+    // THE "GHOST" MAPPINGS (Fixed Position)
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Ownership index — maps a sender-scoped hash to the alias nameHash.
-     * @dev Written at link time:
-     *        slot  = keccak256(nameHash ++ senderEOA)
-     *        value = nameHash
-     *      Read at unlink time by `_checkCaller` to verify the caller owns the alias.
-     *
-     *      Key:   bytes32 senderHash  (keccak256 of nameHash + owner EOA)
-     *      Value: bytes32 nameHash    (the welded alias storage key)
+     * @notice Ownership index for unlinking verification.
+     * @dev Maps a hash(nameHash + owner) back to the nameHash.
      */
     mapping(bytes32 _senderHash => bytes32 _nameHash) internal _senderToHash;
 
-    uint256[50] private_gap;
+    /**
+     * @notice Explicitly declares the name-to-address mapping in storage.
+     * @dev Even though `Resolve.sol` uses inline assembly `sload(nameHash)`,
+     * this declaration ensures the Solidity compiler reserves the appropriate
+     * storage context and prevents collision with future variables.
+     * * Key:   bytes32 nameHash (The "Welded" hash from NameLib)
+     * Value: address wallet   (The destination Safe or EOA)
+     */
+    mapping(bytes32 _nameHash => address _resolvedWallet) public _nameToWallet;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // UPGRADEABILITY PROTECTION
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * @dev Gap for future variables to prevent storage collisions
+     * when adding new features to the base logic.
+     */
+    uint256[50] private __gap;
 }

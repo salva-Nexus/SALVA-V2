@@ -4,16 +4,18 @@ pragma solidity ^0.8.30;
 import {Initialize} from "@Initialize/Initialize.sol";
 import {LinkName} from "@LinkName/LinkName.sol";
 import {UnlinkName} from "@UnlinkName/UnlinkName.sol";
-import {Price} from "@Price/Price.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title Singleton
  * @notice The primary entry point for SALVA's name-to-wallet/number infrastructure.
  * @dev Combines registry initialization, resolution, linking, and unlinking.
  */
-contract Singleton is Initializable, UUPSUpgradeable, Initialize, LinkName, UnlinkName, Price {
+contract Singleton is Initializable, UUPSUpgradeable, Initialize, LinkName, UnlinkName {
+    using SafeERC20 for IERC20;
     // ─────────────────────────────────────────────────────────────────────────
     // PROTOCOL CONSTANTS
     // ─────────────────────────────────────────────────────────────────────────
@@ -53,11 +55,10 @@ contract Singleton is Initializable, UUPSUpgradeable, Initialize, LinkName, Unli
         return _VERSION;
     }
 
-    function withdraw(address _receiver) external onlyMultiSig(_MULTISIG) {
-        uint256 balance = address(this).balance;
+    function withdraw(address _token, address _receiver) external onlyMultiSig(_MULTISIG) {
+        uint256 balance = IERC20(_token).balanceOf(address(this));
         if (balance > 0) {
-            (bool success,) = _receiver.call{value: address(this).balance}("");
-            require(success);
+            IERC20(_token).safeTransfer(_receiver, balance);
         }
     }
 
@@ -71,6 +72,4 @@ contract Singleton is Initializable, UUPSUpgradeable, Initialize, LinkName, Unli
     // ─────────────────────────────────────────────────────────────────────────
 
     function _authorizeUpgrade(address newImplementation) internal override onlyMultiSig(_MULTISIG) {}
-
-    receive() external payable {}
 }

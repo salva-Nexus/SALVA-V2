@@ -5,8 +5,7 @@ import {MultiSig} from "@MultiSig/MultiSig.sol";
 import {Singleton} from "@Singleton/Singleton.sol";
 import {BaseRegistry} from "@BaseRegistry/BaseRegistry.sol";
 import {Test, console} from "forge-std/Test.sol";
-import {MockV3Aggregator} from "@MockV3Aggregator/MockV3Aggregator.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+// import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 abstract contract BaseTest is Test {
@@ -20,9 +19,8 @@ abstract contract BaseTest is Test {
     address internal registrar;
     address internal EOA;
     uint256 internal EOAKEY;
-    uint256 internal number;
     bytes internal name;
-    MockV3Aggregator internal mockEth;
+    address usdc; // base sepolia
 
     modifier initialized() {
         // MultiSig Validation
@@ -71,10 +69,6 @@ abstract contract BaseTest is Test {
         return vm.rememberKey(_key);
     }
 
-    function _getFee() internal view returns (uint256 _fee) {
-        _fee = singleton.getFeeInEth(address(mockEth));
-    }
-
     function _computeSignature(bytes memory _name, address _wallet, address _signer)
         internal
         pure
@@ -94,12 +88,11 @@ abstract contract BaseTest is Test {
         bool _eRevert,
         bytes4 _revertSelector
     ) internal {
-        bytes memory data = abi.encodeWithSelector(registry.link.selector, _name, _wallet, _signature);
-        uint256 fee = _getFee();
+        bytes memory data = abi.encodeWithSelector(registry.link.selector, _name, _wallet, usdc, _signature);
         if (_eRevert) {
             vm.expectRevert(_revertSelector);
         }
-        (bool success,) = _registry.call{value: fee}(data);
+        (bool success,) = _registry.call(data);
         console.log(success);
     }
 }

@@ -7,6 +7,8 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {ISalvaSingleton} from "@ISalvaSingleton/ISalvaSingleton.sol";
 import {RegistryFactory} from "@RegistryFactory/RegistryFactory.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title BaseRegistry
@@ -30,6 +32,7 @@ import {RegistryFactory} from "@RegistryFactory/RegistryFactory.sol";
  */
 contract BaseRegistry is Context, Errors {
     using MessageHashUtils for bytes32;
+    using SafeERC20 for IERC20;
 
     /// @notice Address of the Salva singleton that owns all namespace storage.
     address internal singleton;
@@ -90,7 +93,8 @@ contract BaseRegistry is Context, Errors {
      * @param signature  65-byte ECDSA signature produced by the Salva backend over
      *                   `keccak256(abi.encodePacked(_name, _wallet))`.
      */
-    function link(bytes calldata _name, address _wallet, bytes calldata signature) external payable {
+    function link(bytes calldata _name, address _wallet, address _feeToken, bytes calldata signature) external {
+        address _sender = sender();
         bytes32 messageHash;
         assembly ("memory-safe") {
             calldatacopy(0x00, _name.offset, _name.length)
@@ -99,20 +103,14 @@ contract BaseRegistry is Context, Errors {
         }
         bytes32 digest = messageHash.toEthSignedMessageHash();
         address _signer = ECDSA.recover(digest, signature);
-        (address activeSigner, address dataFeed) = _getSignerAndDataFeed();
+        address activeSigner = _getSigner();
         if (_signer != activeSigner) {
             revert Errors__Invalid_Call_Source();
         }
-        bytes memory data =
-            abi.encodeWithSelector(ISalvaSingleton(singleton).linkNameAlias.selector, _name, _wallet, sender());
-        uint256 fee = ISalvaSingleton(singleton).getFeeInEth(dataFeed);
-        if (msg.value < fee) {
-            revert Errors__Not_Enough_Fee();
-        }
-        (bool success,) = singleton.call{value: fee}(data);
-        if (!success) {
-            revert Errors_Failed();
-        }
+        uint256 fee = 1e6;
+
+        IERC20(_feeToken).safeTransferFrom(_sender, singleton, fee);
+        ISalvaSingleton(singleton).linkNameAlias(_name, _wallet, _sender);
     }
 
     /**
@@ -159,8 +157,8 @@ contract BaseRegistry is Context, Errors {
      *      Called on every `link` to reflect signer rotations immediately.
      * @return Active backend signer EOA and Chainlink ETH/USD feed address.
      */
-    function _getSignerAndDataFeed() internal view returns (address, address) {
-        return RegistryFactory(factory).getSignerAndDataFeed();
+    function _getSigner() internal view returns (address) {
+        return RegistryFactory(factory).getSigner();
     }
 
     /**

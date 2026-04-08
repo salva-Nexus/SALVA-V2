@@ -4,23 +4,28 @@ pragma solidity ^0.8.30;
 import {BaseTest} from "@BaseTest/BaseTest.t.sol";
 import {DeploySingleton} from "../../script/DeploySingleton.s.sol";
 import {Singleton} from "@Singleton/Singleton.sol";
-import {BaseRegistry} from "@BaseRegistry/BaseRegistry.sol";
+// import {BaseRegistry} from "@BaseRegistry/BaseRegistry.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {TestMultiSig} from "@TestMultiSig/TestMultiSig.t.sol";
 import {Errors} from "@Errors/Errors.sol";
-import {MockV3Aggregator} from "@MockV3Aggregator/MockV3Aggregator.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {MockUSDC} from "@MockUSDC/MockUSDC.sol";
 
 contract TestSingleton is Test, BaseTest, TestMultiSig {
+    using SafeERC20 for IERC20;
+
     function setUp() external {
         DeploySingleton deploy = new DeploySingleton();
-        (singleton, multisig, registry, owner, OWNERKEY, mockEth) = deploy.run();
+        (singleton, multisig, registry, owner, OWNERKEY) = deploy.run();
 
         (EOA, EOAKEY) = makeAddrAndKey("EOA");
         address keyAddr = _rememberKey(EOAKEY);
         assertEq(keyAddr, EOA);
-        number = 1246371524;
         name = bytes("charles");
 
+        _changePrank(owner);
+        usdc = address(new MockUSDC());
         vm.deal(EOA, 5 ether);
         vm.deal(owner, 5 ether);
     }
@@ -39,10 +44,9 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         bytes memory _name = bytes("okoronkwo_charles");
         bytes memory sig = _computeSignature(_name, owner, owner);
         _changePrank(owner);
+        IERC20(usdc).approve(address(registry), 1e6);
         _link(_name, owner, sig, address(registry), false, 0);
 
-        assertEq(address(singleton).balance, _getFee());
-        assertEq(owner.balance, 5 ether - _getFee());
         assertEq(singleton.resolveAddress(bytes("okoronkwo_charles@salva")), owner);
         assertEq(singleton.resolveAddress(bytes("charles_okoronkwo@salva")), owner);
     }
@@ -59,7 +63,10 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
     function test_Unlink_Name() external initialized {
         bytes memory _name = bytes("okoronkwo_charles");
         bytes memory sig = _computeSignature(_name, EOA, owner);
+        _changePrank(owner);
+        IERC20(usdc).safeTransfer(EOA, 1e6);
         _changePrank(EOA);
+        IERC20(usdc).approve(address(registry), 1e6);
         _link(_name, EOA, sig, address(registry), false, 0);
         address linked = registry.resolveAddress(bytes("okoronkwo_charles@salva"));
         assertEq(linked, EOA);
@@ -75,18 +82,23 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
     function test_Phishing_Resistance() external initialized {
         bytes memory _name = bytes("okoronkwo_charles");
         bytes memory sig = _computeSignature(_name, EOA, owner);
+        _changePrank(owner);
+        IERC20(usdc).safeTransfer(EOA, 1e6);
+        IERC20(usdc).safeTransfer(makeAddr("EOA2"), 1e6);
         _changePrank(EOA);
+        IERC20(usdc).approve(address(registry), 1e6);
         _link(_name, EOA, sig, address(registry), false, 0);
 
         _changePrank(makeAddr("EOA2"));
-        vm.deal(makeAddr("EOA2"), 5 ether);
         bytes memory _name0 = bytes(unicode"okoronkwо_charles");
         bytes memory sig0 = _computeSignature(_name0, makeAddr("EOA2"), owner);
         bytes4 revertSelector = Errors.Errors__Invalid_Character.selector;
+        IERC20(usdc).approve(address(registry), 1e6);
         _link(_name0, makeAddr("EOA2"), sig0, address(registry), true, revertSelector);
 
         bytes memory _name1 = bytes("okoronkwo-charles");
         bytes memory sig1 = _computeSignature(_name1, makeAddr("EOA2"), owner);
+        IERC20(usdc).approve(address(registry), 1e6);
         _link(_name1, makeAddr("EOA2"), sig1, address(registry), true, revertSelector);
     }
 
@@ -100,13 +112,15 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         bytes memory _name = bytes("okoronkwo_charles");
         bytes memory sig = _computeSignature(_name, owner, owner);
         _changePrank(owner);
+        IERC20(usdc).approve(address(registry), 1e6);
         _link(_name, owner, sig, address(registry), false, 0);
 
-        _changePrank(EOA);
         bytes memory _name1 = bytes("okoronkwo_charles");
         bytes memory sig1 = _computeSignature(_name1, EOA, owner);
         bytes4 expectedRevert = Errors.Errors__Taken.selector;
+        IERC20(usdc).safeTransfer(EOA, 1e6);
         _changePrank(EOA);
+        IERC20(usdc).approve(address(registry), 1e6);
         _link(_name1, EOA, sig1, address(registry), true, expectedRevert);
     }
 
@@ -115,6 +129,7 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         bytes memory sig = _computeSignature(_name, owner, owner);
         bytes4 expectedRevert = Errors.Errors__Max_Name_Length_Exceeded.selector;
         _changePrank(owner);
+        IERC20(usdc).approve(address(registry), 1e6);
         _link(_name, owner, sig, address(registry), true, expectedRevert);
     }
 
@@ -141,6 +156,7 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         bytes memory _name = bytes("okoronkwo_charles");
         bytes memory sig = _computeSignature(_name, owner, owner);
         _changePrank(owner);
+        IERC20(usdc).approve(address(registry), 1e6);
         _link(_name, owner, sig, address(registry), false, 0);
 
         _changePrank(EOA);
@@ -152,13 +168,16 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         bytes memory _name = bytes("okoronkwo_charles");
         bytes memory sig = _computeSignature(_name, owner, owner);
         _changePrank(owner);
+        IERC20(usdc).approve(address(registry), 1e6);
         _link(_name, owner, sig, address(registry), false, 0);
 
         multisig.upgradeSingleton(payable(address(new Singleton())), "");
 
         bytes memory _name1 = bytes("okoronkwo_buchi");
         bytes memory sig1 = _computeSignature(_name1, EOA, owner);
+        IERC20(usdc).safeTransfer(EOA, 1e6);
         _changePrank(EOA);
+        IERC20(usdc).approve(address(registry), 1e6);
         _link(_name1, EOA, sig1, address(registry), false, 0);
 
         assertEq(registry.resolveAddress(bytes("okoronkwo_charles@salva")), owner);
@@ -177,6 +196,8 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         bytes memory _name = bytes("okoronkwo_charles");
         bytes memory sig = _computeSignature(_name, owner, owner);
         _changePrank(owner);
+
+        IERC20(usdc).approve(address(registry), 1e6);
         _link(_name, owner, sig, address(registry), false, 0);
 
         multisig.updateSigner(EOA);
@@ -184,11 +205,14 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         bytes memory _name2 = bytes("okoronkwo_joe");
         bytes memory sig2 = _computeSignature(_name2, EOA, owner);
         bytes4 revertSelector = Errors.Errors__Invalid_Call_Source.selector;
+        IERC20(usdc).transfer(EOA, 1e6);
         _changePrank(EOA);
+        IERC20(usdc).approve(address(registry), 1e6);
         _link(_name2, EOA, sig2, address(registry), true, revertSelector);
 
         bytes memory _name3 = bytes("okoronkwo_ben");
         bytes memory sig3 = _computeSignature(_name3, EOA, EOA);
+        IERC20(usdc).approve(address(registry), 1e6);
         _link(_name3, EOA, sig3, address(registry), false, 0);
     }
 
@@ -196,22 +220,51 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         bytes memory _name = bytes("okoronkwo_charles");
         bytes memory sig = _computeSignature(_name, owner, owner);
         _changePrank(owner);
+        IERC20(usdc).approve(address(registry), 1e6);
         _link(_name, owner, sig, address(registry), false, 0);
 
         bytes memory _name2 = bytes("okoronkwo_joe");
         bytes memory sig2 = _computeSignature(_name2, EOA, owner);
+        IERC20(usdc).safeTransfer(EOA, 1e6);
         _changePrank(EOA);
+        IERC20(usdc).approve(address(registry), 1e6);
         _link(_name2, EOA, sig2, address(registry), false, 0);
 
-        assertEq(address(singleton).balance, _getFee() * 2);
+        assertEq(IERC20(usdc).balanceOf(address(singleton)), 2e6);
 
         vm.expectRevert(Errors.Errors__Not_Authorized.selector);
-        multisig.withdrawEth(makeAddr("reciever"));
+        multisig.withdraw(address(usdc), makeAddr("reciever"));
 
         _changePrank(owner);
-        multisig.withdrawEth(makeAddr("reciever"));
+        multisig.withdraw(address(usdc), makeAddr("reciever"));
 
-        assertEq(makeAddr("reciever").balance, _getFee() * 2);
-        assertEq(address(singleton).balance, 0);
+        assertEq(IERC20(usdc).balanceOf(makeAddr("reciever")), 2e6);
+        assertEq(IERC20(usdc).balanceOf(address(singleton)), 0);
+    }
+
+    function test_Replay() external initialized {
+        bytes memory _name = bytes("okoronkwo_charles");
+        bytes memory sig = _computeSignature(_name, owner, owner);
+        _changePrank(owner);
+        IERC20(usdc).approve(address(registry), 1e6);
+        _link(_name, owner, sig, address(registry), false, 0);
+
+        address replayer = makeAddr("replayer");
+        IERC20(usdc).transfer(replayer, 1e6);
+
+        _changePrank(replayer);
+        // replayer manages to get the previous signature
+        // even though it doesn't make sense for a replayer to use the same addres of the original owner
+        // we still have to test, to prove:
+        // 1. One gateway through
+        // 2. phishing resistance even if gateway is bypassed
+        IERC20(usdc).approve(address(registry), 1e6);
+        bytes4 selector = Errors.Errors__Taken.selector;
+        // should revert from singleton, not registry
+        _link(_name, owner, sig, address(registry), true, selector);
+    }
+
+    function test_ToBytes() external pure {
+        console.logBytes(bytes("cboi@metamask"));
     }
 }

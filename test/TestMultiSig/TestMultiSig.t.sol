@@ -5,8 +5,12 @@ import {BaseTest} from "@BaseTest/BaseTest.t.sol";
 import {Errors} from "@Errors/Errors.sol";
 import {console} from "forge-std/Test.sol";
 import {BaseRegistry} from "@BaseRegistry/BaseRegistry.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 abstract contract TestMultiSig is BaseTest {
+    using SafeERC20 for IERC20;
+
     function test_Only_Active_Validator_Can_Propose() external {
         _changePrank(EOA);
         vm.expectRevert(abi.encodeWithSelector(Errors.Errors__Not_Authorized.selector));
@@ -136,17 +140,19 @@ abstract contract TestMultiSig is BaseTest {
         multisig.executeInit(metamaskReg);
 
         address user1 = makeAddr("oc");
-        address user2 = makeAddr("oj");
-        vm.deal(user1, 5 ether);
-        vm.deal(user2, 5 ether);
+        address user2 = makeAddr("oj"); // 0xF023284F44A67F64c46E35d8bbdd5D9b39DCA4b2
+        IERC20(usdc).safeTransfer(user1, 1e6);
+        IERC20(usdc).safeTransfer(user2, 1e6);
 
         bytes memory signature1 = _computeSignature(bytes("okoronkwo_charles"), user1, owner);
         bytes memory signature2 = _computeSignature(bytes("okoronkwo_joe"), user2, owner);
 
         _changePrank(user1);
+        IERC20(usdc).approve(coinbaseReg, 1e6);
         _link(bytes("okoronkwo_charles"), user1, signature1, coinbaseReg, false, 0);
 
         _changePrank(user2);
+        IERC20(usdc).approve(metamaskReg, 1e6);
         _link(bytes("okoronkwo_joe"), user2, signature2, metamaskReg, false, 0);
 
         assertEq(BaseRegistry(coinbaseReg).resolveAddress("okoronkwo_charles@coinbase"), user1);
@@ -155,5 +161,18 @@ abstract contract TestMultiSig is BaseTest {
         assertEq(BaseRegistry(metamaskReg).resolveAddress("okoronkwo_joe@metamask"), user2);
         assertEq(BaseRegistry(metamaskReg).resolveAddress("joe_okoronkwo@metamask"), user2);
         assertNotEq(BaseRegistry(coinbaseReg).resolveAddress("okoronkwo_joe@coinbase"), user2);
+    }
+
+    function test_Recovery_Can_Bypass_Quorum() external {
+        _changePrank(owner);
+        address rec = makeAddr("rec");
+        multisig.updateRecovery(rec, true);
+        address coinbaseReg = multisig.deployAndProposeInit("@coinbase");
+
+        _changePrank(rec);
+        multisig.validateRegistry(coinbaseReg);
+
+        vm.warp(block.timestamp + 48 hours);
+        multisig.executeInit(coinbaseReg);
     }
 }

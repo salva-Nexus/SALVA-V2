@@ -43,7 +43,7 @@ abstract contract MultiSigModifier is Errors, MultiSigStorage, Context {
 
     function _onlyValidators() internal view {
         address _sender = sender();
-        if (!_isValidator[_sender] || _recovery[_sender]) {
+        if (!_isValidator[_sender] && !_recovery[_sender]) {
             revert Errors__Not_Authorized();
         }
     }

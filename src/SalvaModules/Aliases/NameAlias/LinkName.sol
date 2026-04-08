@@ -56,7 +56,6 @@ abstract contract LinkName is Resolve {
      */
     function linkNameAlias(bytes calldata name, address wallet, address _sender)
         external
-        payable
         nonReentrant
         returns (bool isLinked)
     {

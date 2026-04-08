@@ -72,45 +72,6 @@ abstract contract Resolve is NameLib {
     }
 
     /**
-     * @notice Resolves a namespaced alias to a numeric account identifier.
-     * @dev Same resolution flow as resolveAddress but reads from _nameToNumber slot.
-     */
-    // ─────────────────────────────────────────────────────────────────────────
-    // DIAGRAMMATIC FLOW:
-    // 1. Extract nameData from Calldata
-    // 2. _normalizeAndValidate(nameData) -> Get Split Offset
-    // 3. Mload(Mem + Offset) -> Extract Namespace
-    // 4. Keccak(Name + Namespace) -> Storage Slot
-    // 5. Sload(Slot) -> Account Number
-    // ─────────────────────────────────────────────────────────────────────────
-    function resolveNumber(bytes calldata aliasName) external view returns (uint256 accountNumber) {
-        uint256 fullLength;
-        bytes32 nameData;
-        assembly {
-            fullLength := aliasName.length
-            nameData := calldataload(aliasName.offset)
-        }
-
-        uint256 lengthWithoutNamespace = _normalizeAndValidate(fullLength, nameData, 1);
-        bytes16 namespaceHandle;
-
-        assembly {
-            // Action: Buffer calldata into memory for pointer manipulation
-            calldatacopy(0x80, aliasName.offset, 0x30)
-
-            // Action: Jump past the local name to grab the '@namespace' handle
-            namespaceHandle := mload(add(0x80, lengthWithoutNamespace))
-        }
-
-        bytes32 nameHash = _computeNameHash(namespaceHandle, lengthWithoutNamespace, fullLength, 1);
-
-        assembly {
-            // Action: Direct Storage Load of the mapped uint256 account number
-            accountNumber := sload(nameHash)
-        }
-    }
-
-    /**
      * @notice Returns the namespace and initialization status of a given registry contract.
      * @dev Reads directly from _registryNamespace storage mapping.
      * @param registry The address of the registry contract to query.

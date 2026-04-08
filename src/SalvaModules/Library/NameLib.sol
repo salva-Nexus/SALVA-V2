@@ -97,12 +97,12 @@ abstract contract NameLib is Modifier, Storage {
      * @param length        Byte length of `nameToBytes` (or the full handle).
      * @param nameToBytes   Raw `bytes32` word loaded from calldata.
      * @param mark          `0` → strict write-path validation; `1` → read/unlink path.
-     * @return processedLength  Byte length of the canonical name written to memory.
+     * @return pLength      Byte length of the canonical name written to memory.
      */
     function _normalizeAndValidate(uint256 length, bytes32 nameToBytes, uint8 mark)
         internal
         pure
-        returns (uint256 processedLength)
+        returns (uint256 pLength)
     {
         if (length > 0x20) {
             revert Errors__Max_Name_Length_Exceeded();
@@ -207,25 +207,33 @@ abstract contract NameLib is Modifier, Storage {
         // STEP 3 — ALPHABETICAL RECONSTRUCTION
         // ─────────────────────────────────────────────────────────────────
         if (underscoreCount > 0) {
-            // Compare shifted bytes32 parts (dictionary order)
-            bytes32 upper = firstPart > secondPart ? firstPart : secondPart;
-            bytes32 lower = firstPart < secondPart ? firstPart : secondPart;
-            uint256 bigLen = firstPart > secondPart ? firstLength : secondLength;
-            uint256 smlLen = firstPart > secondPart ? secondLength : firstLength;
-
-            assembly ("memory-safe") {
-                // MEMORY REBUILD:
-                // 1. Store Upper Part (Left Aligned)
-                mstore(0x00, shl(sub(0x100, mul(bigLen, 0x08)), upper))
-                // 2. Inject Underscore (0x5f) at offset bigLen
-                mstore8(add(0x00, bigLen), 0x5f)
-                // 3. Store Lower Part (Left Aligned) immediately after
-                mstore(add(add(0x00, bigLen), 0x01), shl(sub(0x100, mul(smlLen, 0x08)), lower))
-            }
-            processedLength = firstLength + secondLength + 1;
+            pLength = _normalize(firstPart, firstLength, secondPart, secondLength);
         } else {
-            processedLength = secondLength == 0 ? firstLength : firstLength + secondLength;
+            pLength = secondLength == 0 ? firstLength : firstLength + secondLength;
         }
+    }
+
+    function _normalize(bytes32 firstPart, uint256 fLength, bytes32 secondPart, uint256 sLength)
+        internal
+        pure
+        returns (uint256 pLength)
+    {
+        // Compare shifted bytes32 parts (dictionary order)
+        bytes32 upper = firstPart > secondPart ? firstPart : secondPart;
+        bytes32 lower = firstPart < secondPart ? firstPart : secondPart;
+        uint256 bigLen = firstPart > secondPart ? fLength : sLength;
+        uint256 smlLen = firstPart > secondPart ? sLength : fLength;
+
+        assembly ("memory-safe") {
+            // MEMORY REBUILD:
+            // 1. Store Upper Part (Left Aligned)
+            mstore(0x00, shl(sub(0x100, mul(bigLen, 0x08)), upper))
+            // 2. Inject Underscore (0x5f) at offset bigLen
+            mstore8(add(0x00, bigLen), 0x5f)
+            // 3. Store Lower Part (Left Aligned) immediately after
+            mstore(add(add(0x00, bigLen), 0x01), shl(sub(0x100, mul(smlLen, 0x08)), lower))
+        }
+        pLength = fLength + sLength + 1;
     }
 
     // ─────────────────────────────────────────────────────────────────────────

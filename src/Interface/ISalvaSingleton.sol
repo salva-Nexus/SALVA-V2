@@ -62,7 +62,7 @@ interface ISalvaSingleton {
      */
     function unlink(bytes calldata name, address _sender) external returns (bool isUnlinked);
 
-    function withdraw(address receiver) external;
+    function withdraw(address token, address receiver) external;
 
     // ─────────────────────────────────────────────────────────────────────────
     // RESOLUTION
@@ -95,14 +95,6 @@ interface ISalvaSingleton {
      * @return namespaceLength  Byte length of the namespace string.
      */
     function namespace(address registry) external view returns (bytes16 namespaceHandle, bytes1 namespaceLength);
-
-    /**
-     * @notice Returns the current $1 USD registration fee denominated in wei.
-     * @dev Computes live from the Chainlink price feed: `1e26 / ethUsdPrice`.
-     * @param dataFeed  Address of the Chainlink ETH/USD price feed.
-     * @return feeInEth Registration fee in wei.
-     */
-    function getFeeInEth(address dataFeed) external pure returns (uint256 feeInEth);
 
     // ─────────────────────────────────────────────────────────────────────────
     // UPGRADE

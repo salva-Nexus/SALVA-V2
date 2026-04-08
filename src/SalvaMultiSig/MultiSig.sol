@@ -46,6 +46,7 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
      */
     function initialize() external initializer {
         _isValidator[sender()] = true;
+        _recovery[sender()] = true;
         _numOfValidators = 1;
     }
 
@@ -145,9 +146,9 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
     function executeInit(address registry) external onlyValidators returns (bool) {
         // two
         Registry storage reg = _registry[registry];
-        // if (!reg.isValidated || block.timestamp < reg.timeLock) {
-        //     revert Error__Invalid_Or_Not_Enough_Time();
-        // }
+        if (!reg.isValidated || block.timestamp < reg.timeLock) {
+            revert Error__Invalid_Or_Not_Enough_Time();
+        }
         reg.isValidated = false;
         reg.isExecuted = true;
 
@@ -236,11 +237,11 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
      * @return `true` on successful execution.
      */
     function executeUpdateValidator(address _addr) external onlyValidators returns (bool) {
-        // one
+        // one1
         ValidatorUpdateRequest storage update = _updateValidator[_addr];
-        // if (!update.isValidated || block.timestamp < update.timeLock) {
-        //     revert Error__Invalid_Or_Not_Enough_Time();
-        // }
+        if (!update.isValidated || block.timestamp < update.timeLock) {
+            revert Error__Invalid_Or_Not_Enough_Time();
+        }
         update.isValidated = false;
         update.isExecuted = true;
 
@@ -344,8 +345,8 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
         return true;
     }
 
-    function withdrawEth(address _receiver) external onlyValidators {
-        ISalvaSingleton(_salvaSingleton).withdraw(_receiver);
+    function withdraw(address _token, address _receiver) external onlyValidators {
+        ISalvaSingleton(_salvaSingleton).withdraw(_token, _receiver);
     }
 
     /// @dev UUPS upgrade authorization — restricted to active validators.

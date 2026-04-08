@@ -6,8 +6,7 @@ import {Singleton} from "@Singleton/Singleton.sol";
 import {MultiSig} from "@MultiSig/MultiSig.sol";
 import {BaseRegistry} from "@BaseRegistry/BaseRegistry.sol";
 import {console} from "forge-std/Test.sol";
-import {MockV3Aggregator} from "@MockV3Aggregator/MockV3Aggregator.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+// import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {RegistryFactory} from "@RegistryFactory/RegistryFactory.sol";
 
@@ -31,37 +30,20 @@ contract DeploySingleton is Script {
         vm.stopBroadcast();
     }
 
-    function run() external returns (Singleton, MultiSig, BaseRegistry, address, uint256, MockV3Aggregator) {
+    function run() external returns (Singleton, MultiSig, BaseRegistry, address, uint256) {
         if (block.chainid != 31337) {
-            (
-                Singleton _singleton,
-                MultiSig multisig,
-                BaseRegistry _registry,
-                address _deployer,
-                uint256 key,
-                MockV3Aggregator mockEth
-            ) = deployLive();
-            return (_singleton, multisig, _registry, _deployer, key, mockEth);
+            (Singleton _singleton, MultiSig multisig, BaseRegistry _registry, address _deployer, uint256 key) =
+                deployLive();
+            return (_singleton, multisig, _registry, _deployer, key);
         } else {
-            (
-                Singleton _singleton,
-                MultiSig multisig,
-                BaseRegistry _registry,
-                address _deployer,
-                uint256 key,
-                MockV3Aggregator mockEth
-            ) = deploySingletonForTest();
-            return (_singleton, multisig, _registry, _deployer, key, mockEth);
+            (Singleton _singleton, MultiSig multisig, BaseRegistry _registry, address _deployer, uint256 key) =
+                deploySingletonForTest();
+            return (_singleton, multisig, _registry, _deployer, key);
         }
     }
 
-    function deploySingletonForTest()
-        public
-        broadcast
-        returns (Singleton, MultiSig, BaseRegistry, address, uint256, MockV3Aggregator)
-    {
+    function deploySingletonForTest() public broadcast returns (Singleton, MultiSig, BaseRegistry, address, uint256) {
         //============ MULTISIG============
-        MockV3Aggregator mockEth = new MockV3Aggregator(8, 2000e8);
         MultiSig multisig = new MultiSig();
         bytes memory mInit = abi.encodeWithSelector(multisig.initialize.selector);
         MultiSig wrappedMultiSig = MultiSig(address(new ERC1967Proxy(address(multisig), mInit)));
@@ -72,21 +54,14 @@ contract DeploySingleton is Script {
         Singleton wrappedSingleton = Singleton(payable(address(new ERC1967Proxy(address(singleton), sInit))));
 
         //============REGISTRY============
-        RegistryFactory factory =
-            new RegistryFactory(address(new BaseRegistry()), address(wrappedMultiSig), address(mockEth), deployer);
+        RegistryFactory factory = new RegistryFactory(address(new BaseRegistry()), address(wrappedMultiSig), deployer);
         wrappedMultiSig.setSingletonAndFactory(address(wrappedSingleton), address(factory));
         BaseRegistry salvaregistry = BaseRegistry(wrappedMultiSig.deployAndProposeInit("@salva"));
 
-        return (wrappedSingleton, wrappedMultiSig, salvaregistry, deployer, deployerKey, mockEth);
+        return (wrappedSingleton, wrappedMultiSig, salvaregistry, deployer, deployerKey);
     }
 
-    function deployLive()
-        public
-        broadcastLive
-        returns (Singleton, MultiSig, BaseRegistry, address, uint256, MockV3Aggregator)
-    {
-        // address dataFeedMAINNET = 0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70; //base
-        address dataFeedTESTNET = 0x4aDC67696bA383F43DD60A9e78F2C97Fbbfc7cb1;
+    function deployLive() public broadcastLive returns (Singleton, MultiSig, BaseRegistry, address, uint256) {
         address backend = 0xfD5A9828bac27495FAb7F6174b3de386E0554187;
 
         //============ MULTISIG============
@@ -100,8 +75,7 @@ contract DeploySingleton is Script {
         Singleton wrappedSingleton = Singleton(payable(address(new ERC1967Proxy(address(singleton), sInit))));
 
         //============REGISTRY============
-        RegistryFactory factory =
-            new RegistryFactory(address(new BaseRegistry()), address(wrappedMultiSig), dataFeedTESTNET, backend);
+        RegistryFactory factory = new RegistryFactory(address(new BaseRegistry()), address(wrappedMultiSig), backend);
         wrappedMultiSig.setSingletonAndFactory(address(wrappedSingleton), address(factory));
         // BaseRegistry registry = BaseRegistry(wrappedMultiSig.deployAndProposeInit("@salva"));
 
@@ -109,14 +83,6 @@ contract DeploySingleton is Script {
         //console.log("REGISTRY", address(registry));
         console.log("MULTISIG: ", address(wrappedMultiSig));
         console.log("FACTORY: ", address(factory));
-        return
-            (
-                wrappedSingleton,
-                wrappedMultiSig,
-                BaseRegistry(address(0)),
-                msg.sender,
-                0,
-                new MockV3Aggregator(8, 2000e8)
-            );
+        return (wrappedSingleton, wrappedMultiSig, BaseRegistry(address(0)), msg.sender, 0);
     }
 }

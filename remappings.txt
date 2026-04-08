@@ -21,7 +21,6 @@
 @MultiSigHelper/=src/SalvaMultiSig/
 @NameLib/=src/SalvaModules/Library/
 @chainlink/contracts/=lib/chainlink-brownie-contracts/contracts/src/
-@Price/=src/SalvaModules/
-@MockV3Aggregator/=test/Mock/
 @openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
 @RegistryFactory/=src/SalvaRegistry/
+@MockUSDC/=test/Mock/

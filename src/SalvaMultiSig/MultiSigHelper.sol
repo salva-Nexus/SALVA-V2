@@ -75,7 +75,11 @@ abstract contract MultiSigHelper is MultiSigModifier {
      * 1. Sload from _recovery[address] mapping.
      * 2. Returns true if the address holds active recovery permissions.
      */
-    function _isRecovery(address recovery) external view returns (bool) {
+    function isRecovery(address recovery) external view returns (bool) {
         return _recovery[recovery];
+    }
+
+    function isValidator(address validator) external view returns (bool) {
+        return _isValidator[validator];
     }
 }

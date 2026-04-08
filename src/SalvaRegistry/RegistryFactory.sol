@@ -28,10 +28,6 @@ contract RegistryFactory is Context, Errors {
     /// @notice The Salva MultiSig contract — sole authority over factory operations.
     address internal immutable MULTISIG;
 
-    /// @notice Chainlink ETH/USD price feed used to compute the live $1 registration fee.
-    /// @dev Immutable — set once at construction and shared across all clones.
-    address internal immutable DATA_FEED;
-
     /// @notice Salva backend EOA whose signature must accompany every registry link call.
     /// @dev Mutable — can be rotated by the MultiSig via `_updateSigner` if compromised.
     address internal signer;
@@ -40,13 +36,11 @@ contract RegistryFactory is Context, Errors {
      * @param _impl      Address of the deployed BaseRegistry implementation contract.
      * @param _multisig  Address of the Salva MultiSig — only caller authorised to deploy
      *                   registries and rotate the signer.
-     * @param _dataFeed  Chainlink ETH/USD price feed address.
      * @param _signer    Initial Salva backend signer EOA.
      */
-    constructor(address _impl, address _multisig, address _dataFeed, address _signer) {
+    constructor(address _impl, address _multisig, address _signer) {
         IMPLEMENTATION = _impl;
         MULTISIG = _multisig;
-        DATA_FEED = _dataFeed;
         signer = _signer;
     }
 
@@ -108,10 +102,9 @@ contract RegistryFactory is Context, Errors {
      * @dev Called by every BaseRegistry clone inside `link` to avoid storing these
      *      values per-clone and to ensure signer rotations take effect immediately.
      * @return _signer   The active Salva backend signer EOA.
-     * @return _dataFeed The Chainlink ETH/USD price feed address.
      */
-    function getSignerAndDataFeed() external view returns (address _signer, address _dataFeed) {
-        return (signer, DATA_FEED);
+    function getSigner() external view returns (address) {
+        return signer;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
