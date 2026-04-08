@@ -152,9 +152,6 @@ abstract contract NameLib is Modifier, Storage {
                         firstPart := shr(sub(0x100, mul(firstLength, 0x08)), mload(0x00))
                         cursor := 0x00
                     }
-                }
-                if (next == 0x40) {
-                    i = loopLen;
 
                     // New: calldata Length Manipulation Check
                     // Incase the wrong length is passed in raw calldata
@@ -162,9 +159,12 @@ abstract contract NameLib is Modifier, Storage {
                     // or unlink function, so this doesn't revert
                     // This is robust enough that even if you pass name + namespace in the link function
                     // It will stop the loop and use only the name
-                    if (next > 0x00 && next != 0x40) {
+                    if (next > 0x00 && next != 0x40 && char != 0x5f) {
                         revert Errors__Invalid_Length();
                     }
+                }
+                if (next == 0x40) {
+                    i = loopLen;
                 }
             } else {
                 assembly ("memory-safe") {
