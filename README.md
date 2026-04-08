@@ -1,110 +1,234 @@
 <div align="center">
-  <h1>🛡️ Salva Naming Service (SNS)</h1>
-  <p><b>On-Chain Alias Resolution Infrastructure for the Next Billion</b></p>
 
-  <img src="https://img.shields.io/badge/Network-Base-blue?style=for-the-badge&logo=base" />
-  <img src="https://img.shields.io/badge/Stack-Solidity_|_Assembly/Yul-61DAFB?style=for-the-badge&logo=ethereum" />
-  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
+<br />
+
+### **Salva Naming Service (SNS)**
+*On-Chain Alias Resolution Infrastructure for the Next Billion*
+
+<br />
+
+[![Network](https://img.shields.io/badge/Network-Base_Mainnet_&_Testnet-0052FF?style=for-the-badge&logo=coinbase)](https://base.org)
+[![Language](https://img.shields.io/badge/Stack-Solidity_|_Assembly%2FYul-363636?style=for-the-badge&logo=ethereum)](https://soliditylang.org)
+[![License](https://img.shields.io/badge/License-MIT-D4AF37?style=for-the-badge)](./LICENSE)
+[![Status](https://img.shields.io/badge/Status-Live_on_Mainnet-00C853?style=for-the-badge)](https://basescan.org)
+
+<br />
+
+> **SNS is live.** Human-readable wallet aliases are now available on Base Mainnet and Base Testnet.
+
+<br />
+
 </div>
 
 ---
 
-# 🛡️ Salva Naming Service (SNS)
+## 📋 Table of Contents
 
-In the traditional world, you send money using a name. In crypto, you are forced to use long, intimidating addresses like `0x71C7656EC7ab88b098defB751B7401B5f6d8976F`. One wrong character, and your funds are gone forever.
-
-Salva bridges this gap. It is a secure, decentralized naming layer that allows any app — a wallet, a bank, or a payment protocol — to give its users a simple, human-readable **Name Alias** that resolves directly to their wallet address.
+- [The Problem](#-the-problem)
+- [The Solution](#-the-salva-solution)
+- [Contract Addresses](#-contract-addresses)
+- [Why Salva is Different](#-why-salva-is-different)
+- [How It Works](#️-how-it-works)
+- [Contract Architecture](#️-contract-architecture)
+- [Developer Installation](#️-developer-installation)
+- [License](#️-license)
 
 ---
 
 ## 💡 The Problem
 
-Crypto today feels like the early internet, where you had to type raw IP addresses to visit a website. It is error-prone and blocks the next billion users from joining because the interface is too technical and unforgiving.
+Crypto today feels like the early internet, where you had to type raw IP addresses to visit a website.
+
+You send money using a name in the traditional world. In crypto, you are forced to memorize or copy intimidating strings like `0x71C7656EC7ab88b098defB751B7401B5f6d8976F`. One wrong character and your funds are gone — permanently, irreversibly, with no recourse.
+
+This is not a UX problem. It is a trust problem. And it is blocking the next billion users from ever joining.
 
 ---
 
 ## ✨ The Salva Solution
 
-Salva allows apps to create their own **Namespaces**. A user registers a single Name Alias (like `alice`) and that name resolves directly to their wallet address.
+Salva is a secure, decentralized naming layer that lets any app — a wallet, a neobank, a payment protocol — give its users a simple, human-readable **Name Alias** that resolves directly to their on-chain address.
 
-- Alice is `alice@salva`. When you send to her, the protocol resolves her name directly to her wallet address.
-- Bob is `bob@coinbase`. His name resolves to his wallet address within the Coinbase namespace.
-- The same person can hold `miracle@salva` as their main identity, `miracle_business@coinbase` for one venture, and `miracle_savings@coinbase` for another — all pointing to separate wallets.
+```
+alice@salva          →   0x123...abc
+bob@coinbase         →   0x456...def
+miracle@salva        →   0x789...ghi
+miracle_biz@coinbase →   0xabc...jkl
+```
+
+Register once. Yours forever.
+
+---
+
+## 📍 Contract Addresses
+
+### 🟢 Base Mainnet
+
+| Contract     | Address                                                                                                                              |
+| :----------- | :----------------------------------------------------------------------------------------------------------------------------------- |
+| **Singleton** | [`0x1E77312B4aF261F411F96aeb2eA20e13934b0D02`](https://basescan.org/address/0x1E77312B4aF261F411F96aeb2eA20e13934b0D02) |
+
+### 🔵 Base Testnet (Sepolia)
+
+| Contract      | Address                                                                                                                                            |
+| :------------ | :------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Singleton** | [`0xa77eF18F47DE0AcA77faBF329FE0f8820D7F98a6`](https://sepolia.basescan.org/address/0xa77eF18F47DE0AcA77faBF329FE0f8820D7F98a6) |
+
+> The Singleton is the single source of truth for all namespace storage and alias resolution across every registry. Individual registry (gateway) addresses are deployed per namespace and can be queried from the factory.
 
 ---
 
 ## 🌟 Why Salva is Different
 
-**Identity You Can Trust**
-Namespaces are protected by a Guardians system (MultiSig). No one can impersonate a major brand like `@metamask` or `@trustwallet` — every namespace must be verified by a quorum of validators before it goes live.
+### 🔐 Identity You Can Trust
 
-**Total Isolation**
-What happens in `@salva` stays in `@salva`. `alice@salva` and `alice@coinbase` are entirely distinct identities. Each app has total control over its own phonebook with zero interference from other namespaces.
+Namespaces are protected by a **Guardians system** — a MultiSig governance layer with a mandatory 24-hour security window on every new namespace. No one can impersonate `@metamask`, `@trustwallet`, or `@coinbase` without passing a validator quorum. The delay exists precisely to let guardians detect and block fraudulent claims before they finalize.
 
-**Phishing Defense**
-Salva automatically prevents look-alike scams using lowercase enforcement and alphabetical flipping for underscore-split names. `charles_okoronkwo` and `okoronkwo_charles` resolve to the exact same record — making name-order squatting economically pointless.
+### 🏠 Total Namespace Isolation
 
-**Permanent and Cheap**
-Registration is a one-time fee of **$1 USD** paid in ETH, priced live via Chainlink. No renewals. No annual fees. You pay once and the alias is yours until you choose to unlink it.
+`alice@salva` and `alice@coinbase` are entirely distinct identities. Each app owns its own phonebook with zero interference from any other namespace. Storage keys are computed from a welded `keccak256` hash of `name + namespace`, making collision mathematically impossible.
+
+### 🛡️ Phishing Defense by Design
+
+Salva automatically neutralizes look-alike scams:
+
+- All names are **lowercased** at the contract level
+- Underscore-split names are **alphabetically normalized** — `charles_obi` and `obi_charles` resolve to the same record
+
+Name-order squatting becomes economically pointless. There is nothing to squat.
+
+### 💰 Permanent and Affordable
+
+Registration is a **one-time fee of $1 USD** paid in USDC or USDT. No renewals. No annual subscriptions. No gas surprises. You pay once and the alias is yours until you choose to unlink it.
 
 ---
 
 ## 🗺️ How It Works
 
-### 1. The Verification (Guardians)
+### 1. Namespace Governance (The Guardians)
 
-Before an app can start naming its users, it must be approved. Salva uses a **24-hour security window** for every new namespace registration. This delay allows validators to detect and block fraudulent or malicious namespace claims before they are finalized on-chain.
+Before an app can name its users, it must be approved by the Salva guardian network:
 
-### 2. The App Gateways (Registries)
+```
+Validator proposes namespace → Quorum validates → 24h timelock → executeInit
+```
 
-Once approved, an app gets its own isolated **Registry** — a dedicated contract through which its users register and manage their aliases. Each registry is deployed by Salva and is the only authorized caller for its namespace in the singleton.
+The 24-hour window gives the guardian set time to detect fraudulent claims before they are written to the Singleton. Once executed, the namespace is live and immutable.
 
-### 3. Backend Authorization (Signature Gate)
+### 2. App Gateways (Registries)
 
-Every `link` call must carry a valid ECDSA signature from the Salva backend. This ensures all registrations pass through the off-chain reserved-name whitelist check before touching the chain — without making the registry permissioned or breaking the user's `msg.sender` identity.
+Each approved namespace gets an isolated **Registry** — a minimal proxy clone deployed by the `RegistryFactory`. The registry is the only authorized caller for its namespace slot in the Singleton.
 
-### 4. The Resolution (The Result)
+```
+RegistryFactory.deployRegistry(@coinbase)
+  → deploys EIP-1167 clone
+  → initializes with Singleton + namespace
+  → returns registry address to MultiSig
+```
 
-When a name is queried, the singleton resolves the alias to its linked wallet address instantly using a welded keccak256 storage key — no loops, no lookups, one `sload`.
+### 3. Signature Authorization Gate
 
-| Name Alias          | Namespace    | Resolves To        |
-| :------------------ | :----------- | :----------------- |
-| `alice`             | `@salva`     | `0x123...`         |
-| `bob`               | `@coinbase`  | `0x456...`         |
-| `miracle`           | `@salva`     | `0x789...`         |
-| `miracle_business`  | `@coinbase`  | `0xabc...`         |
-| `aggregatorv3_base` | `@chainlink` | `0xaggrv3baseaddr` |
+Every `link` call must carry a valid ECDSA signature from the Salva backend signer. This ensures all registrations pass the off-chain reserved-name whitelist check before touching the chain — without making the registry permissioned or breaking the user's `msg.sender` identity.
+
+The signer address is read from the `RegistryFactory` on every call, so key rotation propagates instantly to all registries with no per-clone update.
+
+### 4. Name Registration Flow
+
+```
+User Safe
+  └── MultiSend (delegatecall)
+        ├── tx1: feeToken.approve(registry, 1 USDC)
+        └── tx2: registry.link(nameBytes, wallet, feeToken, signature)
+                    ├── ecrecover(signature) == backendSigner  ✓
+                    ├── IERC20(feeToken).safeTransferFrom(Safe → Singleton)
+                    └── Singleton.linkNameAlias(name, wallet, Safe)
+                          ├── namespace(registry) → @salva
+                          ├── _normalizeAndValidate(name)
+                          ├── _computeNameHash(name, @salva) → storage key
+                          └── _performLinkToWallet(key, wallet) → sstore
+```
+
+### 5. Resolution (Instant)
+
+```
+resolveAddress("alice@salva") → keccak256("alice@salva") → sload → 0x123...abc
+```
+
+One function call. One storage slot. Deterministic.
+
+### 6. Name Resolution Table
+
+| Name Alias            | Namespace      | Resolves To         |
+| :-------------------- | :------------- | :------------------ |
+| `alice`               | `@salva`       | `0x123...abc`       |
+| `bob`                 | `@coinbase`    | `0x456...def`       |
+| `miracle`             | `@salva`       | `0x789...ghi`       |
+| `miracle_business`    | `@coinbase`    | `0xabc...jkl`       |
+| `aggregatorv3_base`   | `@chainlink`   | `0xaggrv3...addr`   |
 
 ---
 
 ## 🏗️ Contract Architecture
 
 ```
-MultiSig
-  └── proposeInitialization → validateRegistry → executeInit
-        └── Singleton.initializeRegistry(registry, namespaceHandle, length)
+┌─────────────────────────────────────────────────────────────────────────┐
+│                            GOVERNANCE LAYER                             │
+│                                                                         │
+│  MultiSig (Guardians)                                                   │
+│    └── deployAndProposeInit(namespace)                                  │
+│          ├── RegistryFactory.deployRegistry() → clone address           │
+│          └── proposeInitialization(namespace, clone)                    │
+│                └── validateRegistry × N  →  24h timelock               │
+│                      └── executeInit()                                  │
+│                            └── Singleton.initializeRegistry(...)        │
+└─────────────────────────────────────────────────────────────────────────┘
 
-User EOA
-  └── BaseRegistry.link(name, wallet, signature)
-        ├── ecrecover(signature) == backendSigner  ✓
-        └── Singleton.linkNameAlias(name, wallet, senderEOA)
-              ├── namespace(registry) → @salva
-              ├── _normalizeAndValidate(name)       → canonical form
-              ├── _computeNameHash(name, @salva)    → storage key
-              └── _performLinkToWallet(key, wallet) → sstore
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          REGISTRATION LAYER                             │
+│                                                                         │
+│  User Safe (msg.sender throughout via MultiSend delegatecall)           │
+│    └── MultiSend                                                        │
+│          ├── feeToken.approve(registry, 1e6)                            │
+│          └── BaseRegistry.link(name, wallet, feeToken, signature)       │
+│                ├── ecrecover(sig) == RegistryFactory.getSigner()  ✓     │
+│                ├── IERC20(feeToken).safeTransferFrom(Safe, Singleton)   │
+│                └── Singleton.linkNameAlias(name, wallet, Safe)          │
+│                      ├── _normalizeAndValidate(name)                    │
+│                      ├── _computeNameHash(name, namespace) → key        │
+│                      └── _performLinkToWallet(key, wallet) → sstore     │
+└─────────────────────────────────────────────────────────────────────────┘
 
-User EOA
-  └── BaseRegistry.unlink(name)
-        └── Singleton.unlink(name, senderEOA)
-              ├── _normalizeAndValidate(name)       → canonical form
-              ├── _computeNameHash(name, @salva)    → storage key
-              ├── _checkCaller(senderEOA, key)      → ownership verify
-              └── _performUnlink(key, senderHash)   → sstore(0x00)
+┌─────────────────────────────────────────────────────────────────────────┐
+│                            UNLINK LAYER                                 │
+│                                                                         │
+│  User Safe                                                              │
+│    └── BaseRegistry.unlink(nameBytes)                                   │
+│          └── Singleton.unlink(name, Safe)                               │
+│                ├── _normalizeAndValidate(name)                          │
+│                ├── _computeNameHash(name, namespace) → key              │
+│                ├── _checkCaller(Safe, key) → ownership verify           │
+│                └── _performUnlink(key, ownerHash) → sstore(0x00)        │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          RESOLUTION LAYER                               │
+│                                                                         │
+│  Anyone                                                                 │
+│    └── BaseRegistry.resolveAddress("alice@salva")                       │
+│          └── Singleton.resolveAddress("alice@salva")                    │
+│                └── sload( keccak256("alice@salva") ) → 0x123...abc      │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## 🛠️ Developer Installation
+
+### Prerequisites
+
+- [Foundry](https://book.getfoundry.sh/getting-started/installation)
+
+### Setup
 
 ```bash
 git clone https://github.com/salva-Nexus/SALVA-V2.git
@@ -116,8 +240,30 @@ forge build
 ### Testing
 
 ```bash
+# Run all tests
 forge test
+
+# Run with verbose trace output
 forge test -vvv
+
+# Run a specific test file
+forge test --match-path test/BaseRegistry.t.sol -vvv
+```
+
+### Resolve a Name (via CLI)
+
+```bash
+# Resolve alice@salva on Base Mainnet
+cast call 0x1E77312B4aF261F411F96aeb2eA20e13934b0D02 \
+  "resolveAddress(bytes)(address)" \
+  $(cast --from-utf8 "alice@salva") \
+  --rpc-url https://mainnet.base.org
+
+# Resolve on Base Testnet
+cast call 0xa77eF18F47DE0AcA77faBF329FE0f8820D7F98a6 \
+  "resolveAddress(bytes)(address)" \
+  $(cast --from-utf8 "alice@salva") \
+  --rpc-url https://sepolia.base.org
 ```
 
 ---
@@ -125,3 +271,11 @@ forge test -vvv
 ## ⚖️ License
 
 Distributed under the MIT License. See [`LICENSE`](./LICENSE) for more information.
+
+---
+
+<div align="center">
+
+Built on [Base](https://base.org) &nbsp;·&nbsp; Secured by [Safe](https://safe.global) &nbsp;·&nbsp; Priced by [Chainlink](https://chain.link)
+
+</div>
