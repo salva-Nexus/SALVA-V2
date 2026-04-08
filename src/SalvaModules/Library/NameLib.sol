@@ -179,14 +179,14 @@ abstract contract NameLib is Modifier, Storage {
                     // This is like a forward, makes i == length, so that i < length will be false and stop the loop
                     i = loopLen;
 
-                    if (next > 0x00 && next != 0x40) {
-                        revert Errors__Invalid_Length();
-                    }
-
                     assembly ("memory-safe") {
                         secondLength := cursor
                         // Extraction: Load segment and shift to high bits for 'upper/lower' check
                         secondPart := shr(sub(0x100, mul(secondLength, 0x08)), mload(0x00))
+                    }
+
+                    if (next > 0x00 && next != 0x40) {
+                        revert Errors__Invalid_Length();
                     }
                 }
             }
