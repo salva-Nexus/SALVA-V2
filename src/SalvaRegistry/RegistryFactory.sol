@@ -32,16 +32,19 @@ contract RegistryFactory is Context, Errors {
     /// @dev Mutable — can be rotated by the MultiSig via `_updateSigner` if compromised.
     address internal signer;
 
+    address internal NGNs;
+
     /**
      * @param _impl      Address of the deployed BaseRegistry implementation contract.
      * @param _multisig  Address of the Salva MultiSig — only caller authorised to deploy
      *                   registries and rotate the signer.
      * @param _signer    Initial Salva backend signer EOA.
      */
-    constructor(address _impl, address _multisig, address _signer) {
+    constructor(address _impl, address _multisig, address _signer, address ngns) {
         IMPLEMENTATION = _impl;
         MULTISIG = _multisig;
         signer = _signer;
+        NGNs = ngns;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -103,8 +106,8 @@ contract RegistryFactory is Context, Errors {
      *      values per-clone and to ensure signer rotations take effect immediately.
      * @return _signer   The active Salva backend signer EOA.
      */
-    function getSigner() external view returns (address) {
-        return signer;
+    function getSignerAndNGNs() external view returns (address, address) {
+        return (signer, NGNs);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -149,11 +149,11 @@ abstract contract TestMultiSig is BaseTest {
 
         _changePrank(user1);
         IERC20(usdc).approve(coinbaseReg, 1e6);
-        _link(bytes("okoronkwo_charles"), user1, signature1, coinbaseReg, false, 0);
+        _link(bytes("okoronkwo_charles"), user1, signature1, coinbaseReg, 0);
 
         _changePrank(user2);
         IERC20(usdc).approve(metamaskReg, 1e6);
-        _link(bytes("okoronkwo_joe"), user2, signature2, metamaskReg, false, 0);
+        _link(bytes("okoronkwo_joe"), user2, signature2, metamaskReg, 0);
 
         assertEq(BaseRegistry(coinbaseReg).resolveAddress("okoronkwo_charles@coinbase"), user1);
         assertEq(BaseRegistry(coinbaseReg).resolveAddress("charles_okoronkwo@coinbase"), user1);

@@ -17,9 +17,9 @@ contract DeployImpl is Script {
 
     function run() external broadcastLive returns (address) {
         // NGN -> 0x78E9917e6A7D7DD2fd3fc031723741F4f755641C
-        // Singleton singProxy = Singleton(0x1E77312B4aF261F411F96aeb2eA20e13934b0D02);
-        MultiSig mulsigproxy = MultiSig(0x62f2EEb91A32E4BBEafC74ce8e274bE3c1e336E0);
-        // RegistryFactory factory = RegistryFactory(0x7f635559a6A7DbA645be62243279E586D0c66C88)
+        // Singleton singProxy = Singleton(0xaeb9fcC270F240FAA9A7f9d8b84eD6fE5c8f6b61);
+        MultiSig mulsigproxy = MultiSig(0xEe1195Ba5A9844a5b697A7a7070D7C2FBA0e45f0);
+        // RegistryFactory factory = RegistryFactory(0x7c6F02D4A226D0fFd6e0d47b50D0336aDb5c9CD6)
         MultiSig newImpl = new MultiSig();
 
         mulsigproxy.upgradeToAndCall(address(newImpl), "");

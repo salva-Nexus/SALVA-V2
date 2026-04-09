@@ -66,8 +66,8 @@ contract BaseRegistry is Context, Errors {
      */
     function initialize(address _singleton, address _factory, string memory _namespace) external isInitialized {
         singleton = _singleton;
-        namespaceName = _namespace;
         factory = _factory;
+        namespaceName = _namespace;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -103,11 +103,11 @@ contract BaseRegistry is Context, Errors {
         }
         bytes32 digest = messageHash.toEthSignedMessageHash();
         address _signer = ECDSA.recover(digest, signature);
-        address activeSigner = _getSigner();
+        (address activeSigner, address ngns) = _getSignerAndNGNs();
         if (_signer != activeSigner) {
             revert Errors__Invalid_Call_Source();
         }
-        uint256 fee = 1e6;
+        uint256 fee = _feeToken == ngns ? 1000e6 : 1e6;
 
         IERC20(_feeToken).safeTransferFrom(_sender, singleton, fee);
         ISalvaSingleton(singleton).linkNameAlias(_name, _wallet, _sender);
@@ -157,8 +157,8 @@ contract BaseRegistry is Context, Errors {
      *      Called on every `link` to reflect signer rotations immediately.
      * @return Active backend signer EOA and Chainlink ETH/USD feed address.
      */
-    function _getSigner() internal view returns (address) {
-        return RegistryFactory(factory).getSigner();
+    function _getSignerAndNGNs() internal view returns (address, address) {
+        return RegistryFactory(factory).getSignerAndNGNs();
     }
 
     /**

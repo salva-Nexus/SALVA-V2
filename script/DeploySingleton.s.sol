@@ -54,7 +54,7 @@ contract DeploySingleton is Script {
         Singleton wrappedSingleton = Singleton(payable(address(new ERC1967Proxy(address(singleton), sInit))));
 
         //============REGISTRY============
-        RegistryFactory factory = new RegistryFactory(address(new BaseRegistry()), address(wrappedMultiSig), deployer);
+        RegistryFactory factory = new RegistryFactory(address(new BaseRegistry()), address(wrappedMultiSig), deployer, address(0x123));
         wrappedMultiSig.setSingletonAndFactory(address(wrappedSingleton), address(factory));
         BaseRegistry salvaregistry = BaseRegistry(wrappedMultiSig.deployAndProposeInit("@salva"));
 
@@ -63,6 +63,7 @@ contract DeploySingleton is Script {
 
     function deployLive() public broadcastLive returns (Singleton, MultiSig, BaseRegistry, address, uint256) {
         address backend = 0xfD5A9828bac27495FAb7F6174b3de386E0554187;
+        address ngns = 0x78E9917e6A7D7DD2fd3fc031723741F4f755641C;
 
         //============ MULTISIG============
         MultiSig multisig = new MultiSig();
@@ -75,7 +76,7 @@ contract DeploySingleton is Script {
         Singleton wrappedSingleton = Singleton(payable(address(new ERC1967Proxy(address(singleton), sInit))));
 
         //============REGISTRY============
-        RegistryFactory factory = new RegistryFactory(address(new BaseRegistry()), address(wrappedMultiSig), backend);
+        RegistryFactory factory = new RegistryFactory(address(new BaseRegistry()), address(wrappedMultiSig), backend, ngns);
         wrappedMultiSig.setSingletonAndFactory(address(wrappedSingleton), address(factory));
         // BaseRegistry registry = BaseRegistry(wrappedMultiSig.deployAndProposeInit("@salva"));
 
