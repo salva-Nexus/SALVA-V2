@@ -276,6 +276,6 @@ Distributed under the MIT License. See [`LICENSE`](./LICENSE) for more informati
 
 <div align="center">
 
-Built on [Base](https://base.org) &nbsp;·&nbsp; Secured by [Safe](https://safe.global) &nbsp;·&nbsp; Priced by [Chainlink](https://chain.link)
+Built on [Base](https://base.org) &nbsp;·&nbsp; Secured by [Safe](https://safe.global) &nbsp;·&nbsp; 
 
 </div>
