@@ -91,8 +91,6 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         bytes memory _name2 = bytes("cboi_");
         bytes4 revertSelector2 = Errors.Errors_Invalid_Sub_Name_Format.selector;
         _start(_name2, makeAddr("EOA2"), owner, makeAddr("EOA2"), revertSelector2);
-
-
     }
 
     function test_Only_Registry_Can_Call_Singleton_Directly() external initialized {
