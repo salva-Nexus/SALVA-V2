@@ -59,9 +59,8 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         _changePrank(owner);
         _transfer(EOA);
 
-         bytes memory _name = bytes("okoronkwo_charles");
+        bytes memory _name = bytes("okoronkwo_charles");
         _start(_name, EOA, owner, EOA, 0);
-
 
         address linked = registry.resolveAddress(bytes("okoronkwo_charles@salva"));
         assertEq(linked, EOA);
@@ -82,7 +81,7 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         _changePrank(owner);
         _transfer(EOA);
         _transfer(makeAddr("EOA2"));
-        
+
         _changePrank(makeAddr("EOA2"));
         bytes memory _name0 = bytes(unicode"okoronkwо_charles");
         bytes4 revertSelector = Errors.Errors__Invalid_Character.selector;
@@ -164,7 +163,7 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
     }
 
     function test_updateSigner() external initialized {
-       bytes memory _name = bytes("okoronkwo_charles");
+        bytes memory _name = bytes("okoronkwo_charles");
         _start(_name, owner, owner, owner, 0);
 
         multisig.updateSigner(EOA);
@@ -173,13 +172,12 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         bytes memory _name2 = bytes("okoronkwo_joe");
         bytes4 revertSelector = Errors.Errors__Invalid_Call_Source.selector;
         _start(_name2, EOA, owner, EOA, revertSelector);
-        
 
         bytes memory _name3 = bytes("okoronkwo_ben");
         _start(_name3, EOA, EOA, EOA, 0);
     }
- 
-    function test_Withdrawal() external initialized { 
+
+    function test_Withdrawal() external initialized {
         bytes memory _name = bytes("okoronkwo_charles");
         _start(_name, owner, owner, owner, 0);
         _transfer(EOA);
@@ -206,7 +204,6 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         address replayer = makeAddr("replayer");
         _transfer(replayer);
 
-
         _changePrank(replayer);
         // replayer manages to get the previous signature
         // even though it doesn't make sense for a replayer to use the same addres of the original owner
@@ -214,7 +211,7 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         // 1. One gateway through
         // 2. phishing resistance even if gateway is bypassed
         bytes4 selector = Errors.Errors__Taken.selector;
-         // should revert from singleton, not registry
+        // should revert from singleton, not registry
         _start(_name, owner, owner, replayer, selector);
     }
 

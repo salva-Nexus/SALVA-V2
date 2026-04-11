@@ -54,7 +54,8 @@ contract DeploySingleton is Script {
         Singleton wrappedSingleton = Singleton(payable(address(new ERC1967Proxy(address(singleton), sInit))));
 
         //============REGISTRY============
-        RegistryFactory factory = new RegistryFactory(address(new BaseRegistry()), address(wrappedMultiSig), deployer, address(0x123));
+        RegistryFactory factory =
+            new RegistryFactory(address(new BaseRegistry()), address(wrappedMultiSig), deployer, address(0x123));
         wrappedMultiSig.setSingletonAndFactory(address(wrappedSingleton), address(factory));
         BaseRegistry salvaregistry = BaseRegistry(wrappedMultiSig.deployAndProposeInit("@salva"));
 
@@ -76,7 +77,8 @@ contract DeploySingleton is Script {
         Singleton wrappedSingleton = Singleton(payable(address(new ERC1967Proxy(address(singleton), sInit))));
 
         //============REGISTRY============
-        RegistryFactory factory = new RegistryFactory(address(new BaseRegistry()), address(wrappedMultiSig), backend, ngns);
+        RegistryFactory factory =
+            new RegistryFactory(address(new BaseRegistry()), address(wrappedMultiSig), backend, ngns);
         wrappedMultiSig.setSingletonAndFactory(address(wrappedSingleton), address(factory));
         // BaseRegistry registry = BaseRegistry(wrappedMultiSig.deployAndProposeInit("@salva"));
 
