@@ -97,6 +97,7 @@ contract BaseRegistry is Context, Errors {
     function link(bytes calldata _name, address _wallet, address _feeToken, bytes calldata signature) external {
         address _sender = sender();
         bytes32 messageHash;
+        // same with keccak256(abi.encodePacked(_name, _wallet))
         assembly ("memory-safe") {
             calldatacopy(0x00, _name.offset, _name.length)
             mstore(_name.length, shl(sub(0x100, mul(0x14, 0x08)), _wallet))

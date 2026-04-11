@@ -215,6 +215,12 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         _start(_name, owner, owner, replayer, selector);
     }
 
+    function test_Registry_Corruption_Does_Not_Affect_Singleton() external initialized {
+        bytes memory _name = bytes("okoronkwo_charles_is_not_up_to_64_bytes_but_i_will_make_it_reach_that_length_just_to_see_what_happens_in_the_registry");
+        bytes4 eSelector = Errors.Errors__Max_Name_Length_Exceeded.selector;
+        _start(_name, owner, owner, owner, eSelector);
+    }
+
     function test_ToBytes() external pure {
         console.log(string(bytes("0x4073616c766100000000000000000000")));
         console.logBytes(bytes("cboi@salva"));
