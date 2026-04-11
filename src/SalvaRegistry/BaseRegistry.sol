@@ -87,8 +87,9 @@ contract BaseRegistry is Context, Errors {
      *      The user's EOA is captured as `sender()` and forwarded as `_sender` so the
      *      singleton can build the ownership index for future unlink operations.
      *
-     * @param _name      Raw alias bytes (e.g. `"charles"`). Must satisfy singleton
+     * @param _name      Raw alias bytes (e.g. `"charles"`). should satisfy singleton
      *                   character rules: lowercase a–z, digits 2–9, max one `_`, no 0 or 1.
+     *                   Although it doesn't check for that here, the singleton does that
      * @param _wallet    Wallet address to bind to the alias.
      * @param signature  65-byte ECDSA signature produced by the Salva backend over
      *                   `keccak256(abi.encodePacked(_name, _wallet))`.
