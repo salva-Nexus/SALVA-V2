@@ -201,6 +201,9 @@ abstract contract NameLib is Modifier, Storage {
         pure
         returns (uint256 pLength)
     {
+        if (firstPart == 0 || secondPart == 0) {
+            revert Errors_Invalid_Sub_Name_Format();
+        }
         bytes32 upper = firstPart > secondPart ? firstPart : secondPart;
         bytes32 lower = firstPart < secondPart ? firstPart : secondPart;
         uint256 bigLen = firstPart > secondPart ? fLength : sLength;

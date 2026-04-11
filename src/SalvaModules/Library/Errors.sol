@@ -85,4 +85,7 @@ abstract contract Errors {
 
     /// @dev Registry clone has already been initialized — duplicate initialize call rejected.
     error Errors__Initialized();
+
+    /// @dev 
+    error Errors_Invalid_Sub_Name_Format();
 }

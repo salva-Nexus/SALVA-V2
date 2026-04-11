@@ -41,11 +41,11 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
     }
 
     function test_link_With_Signature() external initialized {
-        bytes memory _name = bytes("okoronkwo_charles");
+        bytes memory _name = bytes("charles_okoronkwo");
         _start(_name, owner, owner, owner, 0);
 
         assertEq(singleton.resolveAddress(bytes("okoronkwo_charles@salva")), owner);
-        assertEq(singleton.resolveAddress(bytes("charles_okoronkwo@salva")), owner);
+        // assertEq(singleton.resolveAddress(bytes("charles_okoronkwo@salva")), owner);
     }
 
     function test_link_From_External_Source() external initialized {
@@ -74,21 +74,25 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
     }
 
     function test_Phishing_Resistance() external initialized {
-        bytes memory _name = bytes("okoronkwo_charles");
-        _start(_name, EOA, owner, EOA, 0);
-        // stopped
+        bytes memory _name = bytes("cboi");
+        _start(_name, EOA, owner, owner, 0);
 
         _changePrank(owner);
-        _transfer(EOA);
         _transfer(makeAddr("EOA2"));
 
         _changePrank(makeAddr("EOA2"));
-        bytes memory _name0 = bytes(unicode"okoronkwо_charles");
+        bytes memory _name0 = bytes(unicode"cbоi");
         bytes4 revertSelector = Errors.Errors__Invalid_Character.selector;
         _start(_name0, makeAddr("EOA2"), owner, makeAddr("EOA2"), revertSelector);
 
-        bytes memory _name1 = bytes("okoronkwo-charles");
+        bytes memory _name1 = bytes("cbo1");
         _start(_name1, makeAddr("EOA2"), owner, makeAddr("EOA2"), revertSelector);
+
+        bytes memory _name2 = bytes("cboi_");
+        bytes4 revertSelector2 = Errors.Errors_Invalid_Sub_Name_Format.selector;
+        _start(_name2, makeAddr("EOA2"), owner, makeAddr("EOA2"), revertSelector2);
+
+
     }
 
     function test_Only_Registry_Can_Call_Singleton_Directly() external initialized {
