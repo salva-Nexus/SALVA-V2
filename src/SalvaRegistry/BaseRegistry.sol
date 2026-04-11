@@ -13,61 +13,62 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 /**
  * @title BaseRegistry
  * @author cboi@Salva
- * @notice User-facing gateway for a single Salva namespace.
- * @dev Deployed as an EIP-1167 minimal proxy clone by the RegistryFactory.
- *      Each instance corresponds to exactly one namespace.
- *
- *      Security model:
- *        · `link`   — requires a valid ECDSA signature from the Salva backend signer.
- *                     The signer and data feed are read from the factory on every call,
- *                     so a key rotation propagates instantly with no per-clone update.
- *                     This gate ensures all registrations pass the off-chain reserved-name
- *                     whitelist check before touching the chain.
- *        · `unlink` — callable directly by the alias owner; no signature required.
- *                     Ownership is enforced inside the singleton via the ownership index
- *                     written at link time.
- *
- *      This contract never retains user funds — any ETH received is forwarded to the
- *      singleton as the registration fee within the same call.
+ * @notice The entry point for users to interact with a specific Salva namespace.
+ * @dev This contract is deployed as an EIP-1167 minimal proxy. It handles signature
+ * verification and fee collection before delegating the final state change to the Singleton.
+ * * Key Architecture:
+ * - Each Registry instance is unique to one namespace.
+ * - It fetches the protocol `signer` and `NGNs` token address from the Factory on-the-fly.
+ * - Registration fees are tiered: 1000 units for NGNs (e.g., 1000 NGNs) or 1 unit for other
+ * tokens (e.g., 1 USDC/USDT) to normalize value across assets.
  */
 contract BaseRegistry is Context, Errors {
     using MessageHashUtils for bytes32;
     using SafeERC20 for IERC20;
 
-    /// @notice Address of the Salva singleton that owns all namespace storage.
+    /**
+     * @notice The core protocol storage contract where name-to-address mappings are kept.
+     */
     address internal singleton;
 
-    /// @notice Address of the RegistryFactory — source of truth for signer and data feed.
+    /**
+     * @notice The central factory that governs protocol-wide configuration (Signer and NGNs).
+     */
     address internal factory;
 
-    /// @notice Human-readable namespace string for this registry instance (e.g. "@salva").
-    string internal namespaceName;
+    /**
+     * @notice The human-readable namespace this registry manages
+     */
+    string internal nspace;
 
-    /// @dev Initialization guard — set to true after the first `initialize` call.
+    /**
+     * @dev Simple guard to prevent re-initialization of the proxy.
+     */
     bool internal initialized;
 
     // ─────────────────────────────────────────────────────────────────────────
     // INITIALIZATION
     // ─────────────────────────────────────────────────────────────────────────
 
-    /// @dev Reverts if this clone has already been initialized.
+    /**
+     * @dev Prevents the `initialize` function from being called more than once.
+     */
     modifier isInitialized() {
         _isInitialized();
         _;
     }
 
     /**
-     * @notice Initializes the registry clone. Can only be called once.
-     * @dev Called by the RegistryFactory immediately after cloning.
-     *      Replaces the constructor for EIP-1167 clone compatibility.
-     * @param _singleton  Address of the Salva singleton.
-     * @param _factory    Address of the RegistryFactory (signer + data feed source).
-     * @param _namespace  Human-readable namespace string for this registry.
+     * @notice Configures the newly cloned registry instance.
+     * @dev Since clones cannot use constructors, this function sets the initial state.
+     * @param _singleton The Salva Singleton address.
+     * @param _factory The RegistryFactory address.
+     * @param _namespace The string name of this registry's namespace.
      */
     function initialize(address _singleton, address _factory, string memory _namespace) external isInitialized {
         singleton = _singleton;
         factory = _factory;
-        namespaceName = _namespace;
+        nspace = _namespace;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -75,40 +76,38 @@ contract BaseRegistry is Context, Errors {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Links a name alias to a wallet address within this registry's namespace.
-     * @dev Workflow:
-     *   1. Reconstruct the message hash from `_name` and `_wallet` using the same
-     *      assembly packing the Salva backend used when producing `signature`.
-     *   2. Apply the Ethereum signed-message prefix and recover the signer via ECDSA.
-     *   3. Revert if the recovered address does not match the factory's active signer.
-     *   4. ABI-encode a `linkNameAlias` call and forward it to the singleton with
-     *      the registration fee attached.
-     *
-     *      The user's EOA is captured as `sender()` and forwarded as `_sender` so the
-     *      singleton can build the ownership index for future unlink operations.
-     *
-     * @param _name      Raw alias bytes (e.g. `"charles"`). should satisfy singleton
-     *                   character rules: lowercase a–z, digits 2–9, max one `_`, no 0 or 1.
-     *                   Although it doesn't check for that here, the singleton does that
-     * @param _wallet    Wallet address to bind to the alias.
-     * @param signature  65-byte ECDSA signature produced by the Salva backend over
-     *                   `keccak256(abi.encodePacked(_name, _wallet))`.
+     * @notice Registers an alias and links it to a destination wallet.
+     * @dev Validates an off-chain signature to ensure the name choice is authorized.
+     * * Security Logic:
+     * 1. Rebuilds the Keccak256 hash using assembly for exact parity with backend packing.
+     * 2. Verifies the signature against the `activeSigner` stored in the Factory.
+     * 3. Determines the fee: 1000 units if paying in NGNs, otherwise 1 unit.
+     * 4. Transfers the fee directly to the Singleton and executes the link.
+     * * @param _name The alias string (bytes) to be registered.
+     * @param _wallet The destination address this name should resolve to.
+     * @param _feeToken The ERC20 token the user chooses to pay the registration fee with.
+     * @param signature The ECDSA signature from the Salva backend authorizing this link.
      */
     function link(bytes calldata _name, address _wallet, address _feeToken, bytes calldata signature) external {
         address _sender = sender();
         bytes32 messageHash;
-        // same with keccak256(abi.encodePacked(_name, _wallet))
+
+        // Manual assembly packing to match: keccak256(abi.encodePacked(_name, _wallet))
         assembly ("memory-safe") {
             calldatacopy(0x00, _name.offset, _name.length)
             mstore(_name.length, shl(sub(0x100, mul(0x14, 0x08)), _wallet))
             messageHash := keccak256(0x00, add(_name.length, 0x14))
         }
+
         bytes32 digest = messageHash.toEthSignedMessageHash();
         address _signer = ECDSA.recover(digest, signature);
         (address activeSigner, address ngns) = _getSignerAndNGNs();
+
         if (_signer != activeSigner) {
             revert Errors__Invalid_Call_Source();
         }
+
+        // Tiered fee logic: 1000 for NGNs, 1 for others (e.g. USDC)
         uint256 fee = _feeToken == ngns ? 1000e6 : 1e6;
 
         IERC20(_feeToken).safeTransferFrom(_sender, singleton, fee);
@@ -116,12 +115,11 @@ contract BaseRegistry is Context, Errors {
     }
 
     /**
-     * @notice Removes the caller's alias binding from the singleton.
-     * @dev Forwards to `ISalvaSingleton.unlink`. Ownership verification is
-     *      performed inside the singleton — only the address that originally
-     *      registered the alias may unlink it.
-     * @param _name Raw alias bytes to unlink (e.g. `"charles"`).
-     * @return _isSuccess `true` on successful storage zeroing.
+     * @notice Removes an existing alias mapping.
+     * @dev Only the address that originally linked the name can unlink it.
+     * This verification is handled by the Singleton.
+     * @param _name The alias to be removed.
+     * @return _isSuccess Returns true if the unlinking was finalized.
      */
     function unlink(bytes calldata _name) external returns (bool _isSuccess) {
         _isSuccess = ISalvaSingleton(singleton).unlink(_name, sender());
@@ -132,22 +130,21 @@ contract BaseRegistry is Context, Errors {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Resolves a full namespaced alias to its linked wallet address.
-     * @dev Delegates to the singleton's `resolveAddress` view function.
-     *      Pass the full handle including the namespace suffix.
-     * @param _name Full alias bytes including the namespace suffix.
-     * @return _addr The wallet address bound to the alias, or `address(0)` if unregistered.
+     * @notice Returns the wallet address associated with a given handle.
+     * @dev Queries the Singleton directly for resolution.
+     * @param _name The full handle.
+     * @return _addr The resolved address, or address(0) if not found.
      */
     function resolveAddress(bytes calldata _name) external view returns (address _addr) {
         _addr = ISalvaSingleton(singleton).resolveAddress(_name);
     }
 
     /**
-     * @notice Returns the human-readable namespace string for this registry instance.
-     * @return The namespace string (e.g. `"@salva"`).
+     * @notice Returns the name of the namespace this registry governs.
+     * @return The string namespace name.
      */
     function namespace() external view returns (string memory) {
-        return namespaceName;
+        return nspace;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -155,16 +152,14 @@ contract BaseRegistry is Context, Errors {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @dev Fetches the active signer and Chainlink data feed from the factory.
-     *      Called on every `link` to reflect signer rotations immediately.
-     * @return Active backend signer EOA and Chainlink ETH/USD feed address.
+     * @dev Internal helper to query the Factory for the latest protocol configuration.
      */
     function _getSignerAndNGNs() internal view returns (address, address) {
         return RegistryFactory(factory).getSignerAndNGNs();
     }
 
     /**
-     * @dev Initialization guard. Reverts if already initialized, sets flag on first call.
+     * @dev Logic for the initialization guard.
      */
     function _isInitialized() internal {
         if (initialized) {

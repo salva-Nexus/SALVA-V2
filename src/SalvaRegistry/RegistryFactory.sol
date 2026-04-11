@@ -9,49 +9,65 @@ import {Errors} from "@Errors/Errors.sol";
 /**
  * @title RegistryFactory
  * @author cboi@Salva
- * @notice Deploys and manages all BaseRegistry clone instances for the Salva protocol.
- * @dev Uses EIP-1167 minimal proxy clones for gas-efficient registry deployment.
- *      Acts as the single source of truth for the backend signer and Chainlink
- *      data feed — all clones read these values from the factory rather than
- *      storing them locally, allowing a single MultiSig transaction to propagate
- *      a signer rotation across every deployed registry instantly.
+ * @notice Factory for deploying and managing Salva BaseRegistry EIP-1167 minimal proxies.
+ * @dev This contract acts as the Global Configuration Layer for all deployed registries.
+ * By centralizing the `signer` and `NGNs` address here, we enable "Instant Global Rotation."
+ * Registries do not store these values; they perform a staticcall to this factory during
+ * execution. This allows the MultiSig to update the entire ecosystem's security
+ * parameters in a single transaction.
  *
- *      Access control: only the immutable MultiSig address may deploy registries
- *      or rotate the signer.
+ * Inherits:
+ * - Context: For EIP-2771 / Meta-transaction compatibility.
+ * - Errors: Standardized protocol error codes.
  */
 contract RegistryFactory is Context, Errors {
     using Clones for address;
 
-    /// @notice Address of the BaseRegistry implementation all clones delegate to.
+    /**
+     * @notice The logic contract address that all clones delegate their logic to.
+     * @dev Set once at deployment to ensure all registries follow the same byte-code logic.
+     */
     address internal immutable IMPLEMENTATION;
 
-    /// @notice The Salva MultiSig contract — sole authority over factory operations.
+    /**
+     * @notice The protocol's administrative MultiSig address.
+     * @dev The only address authorized to deploy new registries or update global parameters.
+     */
     address internal immutable MULTISIG;
 
-    /// @notice Salva backend EOA whose signature must accompany every registry link call.
-    /// @dev Mutable — can be rotated by the MultiSig via `_updateSigner` if compromised.
+    /**
+     * @notice The active backend EOA used to sign off-chain name link requests.
+     * @dev Mutable. Stored here to allow atomic rotation across all proxies if the key is rotated.
+     */
     address internal signer;
 
+    /**
+     * @notice The address of the NGN-denominated stablecoin used for protocol fees.
+     * @dev Stored globally so registries can resolve the correct fee token dynamically.
+     */
     address internal NGNs;
 
     /**
-     * @param _impl      Address of the deployed BaseRegistry implementation contract.
-     * @param _multisig  Address of the Salva MultiSig — only caller authorised to deploy
-     *                   registries and rotate the signer.
-     * @param _signer    Initial Salva backend signer EOA.
+     * @dev Initializes the factory with core protocol addresses.
+     * @param _impl The BaseRegistry implementation (logic) contract.
+     * @param _multisig The Salva MultiSig that will govern this factory.
+     * @param _signer The initial backend EOA for signature verification.
+     * @param _ngns The initial NGNs token address.
      */
-    constructor(address _impl, address _multisig, address _signer, address ngns) {
+    constructor(address _impl, address _multisig, address _signer, address _ngns) {
         IMPLEMENTATION = _impl;
         MULTISIG = _multisig;
         signer = _signer;
-        NGNs = ngns;
+        NGNs = _ngns;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     // ACCESS CONTROL
     // ─────────────────────────────────────────────────────────────────────────
 
-    /// @dev Reverts if the caller is not the Salva MultiSig.
+    /**
+     * @dev Throws if called by any account other than the MultiSig.
+     */
     modifier onlyMultiSig() {
         _onlyMultiSig();
         _;
@@ -62,13 +78,12 @@ contract RegistryFactory is Context, Errors {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Deploys a new BaseRegistry clone and initializes it for a given namespace.
-     * @dev Clones the implementation via EIP-1167 and calls `initialize` on the
-     *      resulting instance. The factory address is passed so the clone can read
-     *      `signer` and `DATA_FEED` from a single source rather than storing them locally.
-     * @param _singleton  Address of the Salva singleton all registries route calls through.
-     * @param _namespace  Human-readable namespace string for this registry (e.g. "@coinbase").
-     * @return clone      Address of the newly deployed registry clone.
+     * @notice Deploys a gas-efficient minimal proxy (clone) for a specific namespace.
+     * @dev Deploys via EIP-1167 and triggers the `initialize` function on the clone.
+     * The clone is linked to this factory instance to fetch global variables.
+     * @param _singleton The Salva Singleton contract address to be used by the clone.
+     * @param _namespace The string identifier for the registry.
+     * @return clone The address of the newly created BaseRegistry proxy.
      */
     function deployRegistry(address _singleton, string memory _namespace)
         external
@@ -84,12 +99,11 @@ contract RegistryFactory is Context, Errors {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Rotates the Salva backend signer across all deployed registries atomically.
-     * @dev Because all clones read `signer` from this factory, a single call here
-     *      propagates the change to every registry with no per-clone updates required.
-     *      Callable only by the MultiSig — intended for use after a key compromise.
-     * @param _newSigner  Replacement backend signer EOA.
-     * @return `true` on success.
+     * @notice Rotates the backend signer address for the entire protocol.
+     * @dev Changing this value updates every registry instantly, as they read this
+     * state via `getSignerAndNGNs` during every `link` operation.
+     * @param _newSigner The address of the new backend EOA.
+     * @return bool Returns true if the rotation was successful.
      */
     function _updateSigner(address _newSigner) external onlyMultiSig returns (bool) {
         signer = _newSigner;
@@ -101,10 +115,10 @@ contract RegistryFactory is Context, Errors {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Returns the current backend signer and Chainlink data feed in one call.
-     * @dev Called by every BaseRegistry clone inside `link` to avoid storing these
-     *      values per-clone and to ensure signer rotations take effect immediately.
-     * @return _signer   The active Salva backend signer EOA.
+     * @notice External view for registries to fetch critical operational parameters.
+     * @dev Combined into a single call to save gas during cross-contract staticcalls.
+     * @return _signer The current authorized backend signer.
+     * @return _ngns The current NGNs stablecoin address.
      */
     function getSignerAndNGNs() external view returns (address, address) {
         return (signer, NGNs);
@@ -114,7 +128,9 @@ contract RegistryFactory is Context, Errors {
     // INTERNAL
     // ─────────────────────────────────────────────────────────────────────────
 
-    /// @dev Internal access control check — reverts if caller is not the MultiSig.
+    /**
+     * @dev Helper to enforce MultiSig-only access.
+     */
     function _onlyMultiSig() internal view {
         if (sender() != MULTISIG) {
             revert Errors__Not_Authorized();
