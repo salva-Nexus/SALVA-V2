@@ -80,6 +80,9 @@ abstract contract BaseTest is Test {
         bytes32 messageHash = keccak256(abi.encodePacked(_name, _wallet));
         bytes32 digest = messageHash.toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = _sign(_signer, digest);
+        console.log(v);
+        console.logBytes32(r);
+        console.logBytes32(s);
         _signature = abi.encodePacked(r, s, v);
     }
 

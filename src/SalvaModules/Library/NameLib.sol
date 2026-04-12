@@ -135,7 +135,18 @@ abstract contract NameLib is Modifier, Storage {
             if (!isSplit) {
                 if (char != 0x5f) {
                     assembly ("memory-safe") {
-                        mstore(add(0x00, cursor), char)
+                        // Caller address already occupies 0x00,
+                        // so we leave the first char at mstore to clean it
+                        // when the rest of the chars use mstore8..
+                        // This is to prevent redundant mstore on 32bytes mem slot when there's nothing there..
+                        // first char mstore makes the memory clean.
+                        switch eq(cursor, 0x00)
+                        case 0x01 {
+                            mstore(add(0x00, cursor), char)
+                        }
+                        default {
+                            mstore8(add(0x00, cursor), shr(0xf8, char))
+                        }
                         cursor := add(cursor, 0x01)
                     }
                 }
@@ -156,7 +167,7 @@ abstract contract NameLib is Modifier, Storage {
                 }
             } else {
                 assembly ("memory-safe") {
-                    mstore(add(0x00, cursor), char)
+                    mstore8(add(0x00, cursor), shr(0xf8, char))
                     cursor := add(cursor, 0x01)
                 }
 
