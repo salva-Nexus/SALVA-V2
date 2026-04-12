@@ -167,7 +167,13 @@ abstract contract NameLib is Modifier, Storage {
                 }
             } else {
                 assembly ("memory-safe") {
-                    mstore8(add(0x00, cursor), shr(0xf8, char))
+                    switch eq(cursor, 0x00)
+                    case 0x01 {
+                        mstore(add(0x00, cursor), char)
+                    }
+                    default {
+                        mstore8(add(0x00, cursor), shr(0xf8, char))
+                    }
                     cursor := add(cursor, 0x01)
                 }
 
@@ -221,7 +227,9 @@ abstract contract NameLib is Modifier, Storage {
         uint256 smlLen = firstPart > secondPart ? sLength : fLength;
 
         assembly ("memory-safe") {
-            mstore(0x00, shl(sub(0x100, mul(bigLen, 0x08)), upper))
+            if lt(secondPart, firstPart) {
+                mstore(0x00, shl(sub(0x100, mul(bigLen, 0x08)), upper))
+            }
             mstore8(add(0x00, bigLen), 0x5f)
             mstore(add(add(0x00, bigLen), 0x01), shl(sub(0x100, mul(smlLen, 0x08)), lower))
         }

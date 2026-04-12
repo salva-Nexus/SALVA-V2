@@ -41,10 +41,10 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
     }
 
     function test_link_With_Signature() external initialized {
-        bytes memory _name = bytes("charles_okoronkwo");
+        bytes memory _name = bytes("charles_selrahc");
         _start(_name, owner, owner, owner, 0);
 
-        assertEq(singleton.resolveAddress(bytes("okoronkwo_charles@salva")), owner);
+        assertEq(singleton.resolveAddress(bytes("charles_selrahc@salva")), owner);
         // assertEq(singleton.resolveAddress(bytes("charles_okoronkwo@salva")), owner);
     }
 
