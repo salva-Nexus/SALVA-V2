@@ -140,6 +140,9 @@ abstract contract NameLib is Modifier, Storage {
                         // when the rest of the chars use mstore8..
                         // This is to prevent redundant mstore on 32bytes mem slot when there's nothing there..
                         // first char mstore makes the memory clean.
+
+                        // remove redundant shift
+                        // comparison works the same on both lower and higher part
                         switch eq(cursor, 0x00)
                         case 0x01 {
                             mstore(add(0x00, cursor), char)
@@ -154,7 +157,7 @@ abstract contract NameLib is Modifier, Storage {
                 if (char == 0x5f || i == loopLen || next == 0x40) {
                     assembly ("memory-safe") {
                         firstLength := cursor
-                        firstPart := shr(sub(0x100, mul(firstLength, 0x08)), mload(0x00))
+                        firstPart := mload(0x00)
                         cursor := 0x00
                     }
 
@@ -182,7 +185,7 @@ abstract contract NameLib is Modifier, Storage {
 
                     assembly ("memory-safe") {
                         secondLength := cursor
-                        secondPart := shr(sub(0x100, mul(secondLength, 0x08)), mload(0x00))
+                        secondPart := mload(0x00)
                     }
 
                     if (next > 0x00 && next != 0x40) {
@@ -224,14 +227,13 @@ abstract contract NameLib is Modifier, Storage {
         bytes32 upper = firstPart > secondPart ? firstPart : secondPart;
         bytes32 lower = firstPart < secondPart ? firstPart : secondPart;
         uint256 bigLen = firstPart > secondPart ? fLength : sLength;
-        uint256 smlLen = firstPart > secondPart ? sLength : fLength;
 
         assembly ("memory-safe") {
             if lt(secondPart, firstPart) {
-                mstore(0x00, shl(sub(0x100, mul(bigLen, 0x08)), upper))
+                mstore(0x00, upper)
             }
             mstore8(add(0x00, bigLen), 0x5f)
-            mstore(add(add(0x00, bigLen), 0x01), shl(sub(0x100, mul(smlLen, 0x08)), lower))
+            mstore(add(add(0x00, bigLen), 0x01), lower)
         }
         pLength = fLength + sLength + 1;
     }
