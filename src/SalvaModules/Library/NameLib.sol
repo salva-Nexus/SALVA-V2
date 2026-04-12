@@ -192,11 +192,11 @@ abstract contract NameLib is Modifier, Storage {
             }
 
             if (char == 0x5f) {
-                isSplit = true;
                 unchecked {
                     underscoreCount++;
                 }
                 if (underscoreCount > 1) revert Errors__Max_One_Underscore_Allowed();
+                isSplit = true;
             }
             unchecked {
                 i++;
