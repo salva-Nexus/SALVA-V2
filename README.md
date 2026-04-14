@@ -66,13 +66,13 @@ Register once. Yours forever.
 
 | Contract     | Address                                                                                                                              |
 | :----------- | :----------------------------------------------------------------------------------------------------------------------------------- |
-| **Singleton** | [`0xaeb9fcC270F240FAA9A7f9d8b84eD6fE5c8f6b61`](https://basescan.org/address/0xaeb9fcC270F240FAA9A7f9d8b84eD6fE5c8f6b61) |
+| **Singleton** | [`0x95ef0B638899ad4ADCb86D9491D8A3fFf97161C2`](https://basescan.org/address/0xaeb9fcC270F240FAA9A7f9d8b84eD6fE5c8f6b61) |
 
 ### 🔵 Base Testnet (Sepolia)
 
 | Contract      | Address                                                                                                                                            |
 | :------------ | :------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Singleton** | [`0xa77eF18F47DE0AcA77faBF329FE0f8820D7F98a6`](https://sepolia.basescan.org/address/0xa77eF18F47DE0AcA77faBF329FE0f8820D7F98a6) |
+| **Singleton** | [`0x47b12874eFe8678c9EF7dd4188cB84Eea918eFFd`](https://sepolia.basescan.org/address/0xa77eF18F47DE0AcA77faBF329FE0f8820D7F98a6) |
 
 > The Singleton is the single source of truth for all namespace storage and alias resolution across every registry. Individual registry (gateway) addresses are deployed per namespace and can be queried from the factory.
 
