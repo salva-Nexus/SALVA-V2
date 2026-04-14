@@ -112,9 +112,9 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
      */
     function executeUpdateValidator(address _addr) external onlyValidators returns (bool) {
         ValidatorUpdateRequest storage update = _updateValidator[_addr];
-        // if (!update.isValidated || block.timestamp < update.timeLock) {
-        //     revert Error__Invalid_Or_Not_Enough_Time();
-        // }
+        if (!update.isValidated || block.timestamp < update.timeLock) {
+            revert Error__Invalid_Or_Not_Enough_Time();
+        }
         update.isValidated = false;
         update.isExecuted = true;
 

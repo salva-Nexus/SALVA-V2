@@ -77,13 +77,6 @@ interface ISalvaSingleton {
      */
     function resolveAddress(bytes calldata aliasName) external view returns (address wallet);
 
-    /**
-     * @notice Resolves a full namespaced alias to its linked account number.
-     * @param aliasName     Full alias including namespace suffix.
-     * @return accountNumber  The account number bound to the alias, or `0` if unregistered.
-     */
-    function resolveNumber(bytes calldata aliasName) external view returns (uint256 accountNumber);
-
     // ─────────────────────────────────────────────────────────────────────────
     // VIEW
     // ─────────────────────────────────────────────────────────────────────────
