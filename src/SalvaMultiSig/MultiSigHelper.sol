@@ -70,6 +70,7 @@ abstract contract MultiSigHelper is MultiSigModifier {
      * @return _nspace The resulting bytes16 value.
      */
     function _toBytes16(string memory nspace) internal pure returns (bytes16 _nspace) {
+        // forge-lint: disable-next-line(unsafe-typecast)
         _nspace = bytes16(bytes(nspace));
     }
 

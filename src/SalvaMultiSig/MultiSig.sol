@@ -188,6 +188,8 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
         _clone = RegistryFactory(_registryFactory).deployRegistry(address(_salvaSingleton), namespace);
         ISalvaSingleton(_salvaSingleton)
             .initializeRegistry(_clone, _toBytes16(namespace), _toBytes1(bytes(namespace).length));
+
+        emit RegistryInitialized(_clone, namespace);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

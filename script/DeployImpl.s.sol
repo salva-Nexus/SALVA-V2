@@ -20,10 +20,10 @@ contract DeployImpl is Script {
         // Singleton singProxy = Singleton(0xEBEbB3b90048c56067ADaD46ff6Bb1030FEC7764);
         MultiSig multsigproxy = MultiSig(0x2D1277e1Aa451aAA78B8c837aFe8F8fD93F34E3E);
         // RegistryFactory factory = RegistryFactory(0x97F0BCA29304E39936dbf4C58b887DEAE5D9A75B)
-        //MultiSig mulsig = new MultiSig();
-        Singleton singleton = new Singleton();
+        MultiSig mulsig = new MultiSig();
+        // Singleton singleton = new Singleton();
 
-        // multsigproxy.upgradeToAndCall(address(newImpl), "");
-        multsigproxy.upgradeSingleton(address(singleton), "");
+        multsigproxy.upgradeToAndCall(address(mulsig), "");
+        // multsigproxy.upgradeSingleton(address(singleton), "");
     }
 }
