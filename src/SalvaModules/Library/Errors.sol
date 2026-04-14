@@ -88,4 +88,6 @@ abstract contract Errors {
 
     /// @dev
     error Errors_Invalid_Sub_Name_Format();
+
+    error Errors__Initialization_Failed();
 }

@@ -13,45 +13,53 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 /**
  * @title BaseRegistry
  * @author cboi@Salva
- * @notice The entry point for users to interact with a specific Salva namespace.
- * @dev This contract is deployed as an EIP-1167 minimal proxy. It handles signature
- * verification and fee collection before delegating the final state change to the Singleton.
- * * Key Architecture:
- * - Each Registry instance is unique to one namespace.
- * - It fetches the protocol `signer` and `NGNs` token address from the Factory on-the-fly.
- * - Registration fees are tiered: 1000 units for NGNs (e.g., 1000 NGNs) or 1 unit for other
- * tokens (e.g., 1 USDC/USDT) to normalize value across assets.
+ * @notice Primary user interface for a specific Salva namespace.
+ * @dev Deployed as an EIP-1167 minimal proxy. Manages signature verification, tiered fee collection,
+ * and delegates name-to-address mapping changes to the protocol Singleton.
  */
 contract BaseRegistry is Context, Errors {
     using MessageHashUtils for bytes32;
     using SafeERC20 for IERC20;
 
     /**
-     * @notice The core protocol storage contract where name-to-address mappings are kept.
+     * @notice The protocol Singleton contract for global storage.
      */
     address internal singleton;
 
     /**
-     * @notice The central factory that governs protocol-wide configuration (Signer and NGNs).
+     * @notice The Factory contract providing protocol configuration (Signer and NGNs).
      */
     address internal factory;
 
     /**
-     * @notice The human-readable namespace this registry manages
+     * @notice The string identifier for this registry's namespace.
      */
     string internal nspace;
 
     /**
-     * @dev Simple guard to prevent re-initialization of the proxy.
+     * @dev Proxy initialization guard.
      */
     bool internal initialized;
+
+    /**
+     * @notice Emitted when a name is successfully linked to a wallet.
+     * @param name The alias bytes.
+     * @param wallet The resolved destination address.
+     */
+    event LinkSuccess(bytes indexed name, address indexed wallet);
+
+    /**
+     * @notice Emitted when a name mapping is removed.
+     * @param name The alias bytes that were unlinked.
+     */
+    event UnlinkSuccess(bytes indexed name);
 
     // ─────────────────────────────────────────────────────────────────────────
     // INITIALIZATION
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @dev Prevents the `initialize` function from being called more than once.
+     * @dev Modifier to ensure functions are only called during initial setup.
      */
     modifier isInitialized() {
         _isInitialized();
@@ -59,11 +67,11 @@ contract BaseRegistry is Context, Errors {
     }
 
     /**
-     * @notice Configures the newly cloned registry instance.
-     * @dev Since clones cannot use constructors, this function sets the initial state.
-     * @param _singleton The Salva Singleton address.
-     * @param _factory The RegistryFactory address.
-     * @param _namespace The string name of this registry's namespace.
+     * @notice Configures the proxy's initial state.
+     * @dev Replaces constructor logic for minimal proxy clones.
+     * @param _singleton Address of the Salva Singleton.
+     * @param _factory Address of the RegistryFactory.
+     * @param _namespace The namespace identifier string.
      */
     function initialize(address _singleton, address _factory, string memory _namespace) external isInitialized {
         singleton = _singleton;
@@ -76,23 +84,23 @@ contract BaseRegistry is Context, Errors {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Registers an alias and links it to a destination wallet.
-     * @dev Validates an off-chain signature to ensure the name choice is authorized.
-     * * Security Logic:
-     * 1. Rebuilds the Keccak256 hash using assembly for exact parity with backend packing.
-     * 2. Verifies the signature against the `activeSigner` stored in the Factory.
-     * 3. Determines the fee: 1000 units if paying in NGNs, otherwise 1 unit.
-     * 4. Transfers the fee directly to the Singleton and executes the link.
-     * * @param _name The alias string (bytes) to be registered.
-     * @param _wallet The destination address this name should resolve to.
-     * @param _feeToken The ERC20 token the user chooses to pay the registration fee with.
-     * @param signature The ECDSA signature from the Salva backend authorizing this link.
+     * @notice Links an alias handle to a destination wallet address.
+     * @dev Verifies a backend signature and collects a fee before updating the Singleton.
+     * Fee logic: 500 units for NGNs (0.5 NGNs), 0.5 units for others (0.5 USDC/USDT).
+     * @param _name The name string converted to bytes.
+     * @param _wallet The destination address to link.
+     * @param _feeToken The ERC20 token used for fee payment.
+     * @param signature The backend ECDSA signature authorizing the link.
+     * @return _isLinked Boolean success status of the link operation.
      */
-    function link(bytes calldata _name, address _wallet, address _feeToken, bytes calldata signature) external {
+    function link(bytes calldata _name, address _wallet, address _feeToken, bytes calldata signature)
+        external
+        returns (bool _isLinked)
+    {
         address _sender = sender();
         bytes32 messageHash;
 
-        // Manual assembly packing to match: keccak256(abi.encodePacked(_name, _wallet))
+        // Assembly used for gas-efficient packing and hashing: keccak256(abi.encodePacked(_name, _wallet))
         assembly ("memory-safe") {
             calldatacopy(0x00, _name.offset, _name.length)
             mstore(_name.length, shl(sub(0x100, mul(0x14, 0x08)), _wallet))
@@ -107,22 +115,27 @@ contract BaseRegistry is Context, Errors {
             revert Errors__Invalid_Call_Source();
         }
 
-        // Tiered fee logic: 1000 for NGNs, 1 for others (e.g. USDC)
-        uint256 fee = _feeToken == ngns ? 1000e6 : 1e6;
+        // Tiered fee normalization: 500 units if paying in NGNs, 0.5 units for USDC/USDT.
+        uint256 fee = _feeToken == ngns ? 500e6 : 5e5;
 
         IERC20(_feeToken).safeTransferFrom(_sender, singleton, fee);
-        ISalvaSingleton(singleton).linkNameAlias(_name, _wallet, _sender);
+        _isLinked = ISalvaSingleton(singleton).linkNameAlias(_name, _wallet, _sender);
+        if (_isLinked) {
+            emit LinkSuccess(_name, _wallet);
+        }
     }
 
     /**
-     * @notice Removes an existing alias mapping.
-     * @dev Only the address that originally linked the name can unlink it.
-     * This verification is handled by the Singleton.
-     * @param _name The alias to be removed.
-     * @return _isSuccess Returns true if the unlinking was finalized.
+     * @notice Removes a name mapping from the Singleton.
+     * @dev Verification of unlinking rights is handled by the Singleton implementation.
+     * @param _name The name bytes to be unlinked.
+     * @return _isSuccess Boolean success status of the unlink operation.
      */
     function unlink(bytes calldata _name) external returns (bool _isSuccess) {
         _isSuccess = ISalvaSingleton(singleton).unlink(_name, sender());
+        if (_isSuccess) {
+            emit UnlinkSuccess(_name);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -130,18 +143,18 @@ contract BaseRegistry is Context, Errors {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Returns the wallet address associated with a given handle.
-     * @dev Queries the Singleton directly for resolution.
-     * @param _name The full handle.
-     * @return _addr The resolved address, or address(0) if not found.
+     * @notice Resolves a specific name handle to its associated wallet address.
+     * @dev Proxies the view call to the protocol Singleton.
+     * @param _name The handle to resolve.
+     * @return _addr The destination address or address(0) if unmapped.
      */
     function resolveAddress(bytes calldata _name) external view returns (address _addr) {
         _addr = ISalvaSingleton(singleton).resolveAddress(_name);
     }
 
     /**
-     * @notice Returns the name of the namespace this registry governs.
-     * @return The string namespace name.
+     * @notice Returns the namespace identifier for this registry.
+     * @return The string name of the managed namespace.
      */
     function namespace() external view returns (string memory) {
         return nspace;
@@ -152,14 +165,14 @@ contract BaseRegistry is Context, Errors {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @dev Internal helper to query the Factory for the latest protocol configuration.
+     * @dev Fetches current protocol configuration from the RegistryFactory.
      */
     function _getSignerAndNGNs() internal view returns (address, address) {
         return RegistryFactory(factory).getSignerAndNGNs();
     }
 
     /**
-     * @dev Logic for the initialization guard.
+     * @dev Internal check to prevent re-initialization of proxy state.
      */
     function _isInitialized() internal {
         if (initialized) {

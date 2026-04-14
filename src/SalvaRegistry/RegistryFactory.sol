@@ -10,48 +10,37 @@ import {Errors} from "@Errors/Errors.sol";
  * @title RegistryFactory
  * @author cboi@Salva
  * @notice Factory for deploying and managing Salva BaseRegistry EIP-1167 minimal proxies.
- * @dev This contract acts as the Global Configuration Layer for all deployed registries.
- * By centralizing the `signer` and `NGNs` address here, we enable "Instant Global Rotation."
- * Registries do not store these values; they perform a staticcall to this factory during
- * execution. This allows the MultiSig to update the entire ecosystem's security
- * parameters in a single transaction.
- *
- * Inherits:
- * - Context: For EIP-2771 / Meta-transaction compatibility.
- * - Errors: Standardized protocol error codes.
+ * @dev Serves as the global configuration layer. Proxies fetch the `signer` and `NGNs` address from this
+ * contract dynamically, enabling instant protocol-wide updates via a single state change.
  */
 contract RegistryFactory is Context, Errors {
     using Clones for address;
 
     /**
-     * @notice The logic contract address that all clones delegate their logic to.
-     * @dev Set once at deployment to ensure all registries follow the same byte-code logic.
+     * @notice The logic implementation address for all registry clones.
      */
     address internal immutable IMPLEMENTATION;
 
     /**
-     * @notice The protocol's administrative MultiSig address.
-     * @dev The only address authorized to deploy new registries or update global parameters.
+     * @notice The authorized Salva MultiSig address for administrative control.
      */
     address internal immutable MULTISIG;
 
     /**
-     * @notice The active backend EOA used to sign off-chain name link requests.
-     * @dev Mutable. Stored here to allow atomic rotation across all proxies if the key is rotated.
+     * @notice The current backend EOA authorized to sign name link requests.
      */
     address internal signer;
 
     /**
-     * @notice The address of the NGN-denominated stablecoin used for protocol fees.
-     * @dev Stored globally so registries can resolve the correct fee token dynamically.
+     * @notice The contract address of the NGN-denominated stablecoin for fees.
      */
     address internal NGNs;
 
     /**
-     * @dev Initializes the factory with core protocol addresses.
-     * @param _impl The BaseRegistry implementation (logic) contract.
-     * @param _multisig The Salva MultiSig that will govern this factory.
-     * @param _signer The initial backend EOA for signature verification.
+     * @notice Initializes the factory with implementation and governance addresses.
+     * @param _impl The address of the BaseRegistry logic contract.
+     * @param _multisig The protocol MultiSig address.
+     * @param _signer The initial backend signer address.
      * @param _ngns The initial NGNs token address.
      */
     constructor(address _impl, address _multisig, address _signer, address _ngns) {
@@ -66,7 +55,7 @@ contract RegistryFactory is Context, Errors {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @dev Throws if called by any account other than the MultiSig.
+     * @dev Reverts if the caller is not the MultiSig.
      */
     modifier onlyMultiSig() {
         _onlyMultiSig();
@@ -78,12 +67,11 @@ contract RegistryFactory is Context, Errors {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Deploys a gas-efficient minimal proxy (clone) for a specific namespace.
-     * @dev Deploys via EIP-1167 and triggers the `initialize` function on the clone.
-     * The clone is linked to this factory instance to fetch global variables.
-     * @param _singleton The Salva Singleton contract address to be used by the clone.
-     * @param _namespace The string identifier for the registry.
-     * @return clone The address of the newly created BaseRegistry proxy.
+     * @notice Deploys a new minimal proxy registry for a specific namespace.
+     * @dev Uses EIP-1167 for gas-efficient cloning and initializes the new proxy.
+     * @param _singleton The address of the Salva Singleton.
+     * @param _namespace The string name for the new registry's namespace.
+     * @return clone The address of the deployed and initialized BaseRegistry proxy.
      */
     function deployRegistry(address _singleton, string memory _namespace)
         external
@@ -99,11 +87,10 @@ contract RegistryFactory is Context, Errors {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Rotates the backend signer address for the entire protocol.
-     * @dev Changing this value updates every registry instantly, as they read this
-     * state via `getSignerAndNGNs` during every `link` operation.
-     * @param _newSigner The address of the new backend EOA.
-     * @return bool Returns true if the rotation was successful.
+     * @notice Updates the protocol-wide backend signer address.
+     * @dev Affects all existing and future registries that query this factory.
+     * @param _newSigner The address of the new authorized backend signer.
+     * @return bool True upon successful update.
      */
     function _updateSigner(address _newSigner) external onlyMultiSig returns (bool) {
         signer = _newSigner;
@@ -115,9 +102,9 @@ contract RegistryFactory is Context, Errors {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice External view for registries to fetch critical operational parameters.
-     * @dev Combined into a single call to save gas during cross-contract staticcalls.
-     * @return _signer The current authorized backend signer.
+     * @notice Retrieves the current global signer and NGNs token addresses.
+     * @dev Optimized as a single call for consumption by registries during execution.
+     * @return _signer The active authorized signer address.
      * @return _ngns The current NGNs stablecoin address.
      */
     function getSignerAndNGNs() external view returns (address, address) {
@@ -129,7 +116,7 @@ contract RegistryFactory is Context, Errors {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @dev Helper to enforce MultiSig-only access.
+     * @dev Internal helper for enforcing MultiSig-only access control.
      */
     function _onlyMultiSig() internal view {
         if (sender() != MULTISIG) {

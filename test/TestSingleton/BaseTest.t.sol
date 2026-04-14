@@ -25,23 +25,6 @@ abstract contract BaseTest is Test {
     bytes internal name;
     address usdc; // base sepolia
 
-    modifier initialized() {
-        // MultiSig Validation
-        _changePrank(owner);
-        multisig.validateRegistry(address(registry));
-        vm.warp(block.timestamp + 48 hours);
-        multisig.executeInit(address(registry));
-        _;
-        _stopPrank();
-    }
-
-    modifier proposeInit() {
-        _changePrank(owner);
-        multisig.deployAndProposeInit("@coinbase");
-        _;
-        _stopPrank();
-    }
-
     modifier proposeValidatorUpdate() {
         _changePrank(owner);
         multisig.proposeValidatorUpdate(makeAddr("val"), true);

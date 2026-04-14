@@ -5,48 +5,20 @@ import {MultiSigModifier} from "@MultiSigModifier/MultiSigModifier.sol";
 
 /**
  * @title MultiSigHelper
- * @notice Internal view logic for tracking MultiSig validation progress.
- * @dev Provides transparency into the threshold-counting mechanism for registries and validators.
+ * @author cboi@Salva
+ * @notice Internal view logic for tracking MultiSig validation progress and state.
+ * @dev Provides read-only access to validator update status, recovery permissions, and type conversions.
  */
 abstract contract MultiSigHelper is MultiSigModifier {
-    // ─────────────────────────────────────────────────────────────────────────
-    // REGISTRY TRACKING
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * @notice Returns the number of validations still needed to initialize a registry.
-     * * DIAGRAMMATIC FLOW:
-     * 1. Access _registry[address] Storage Slot.
-     * 2. Load 'remaining' (uint8) counter.
-     * 3. Result: Threshold - Current Validations.
-     */
-    function _registryValidationCountRemains(address registry) external view returns (uint256) {
-        Registry storage reg = _registry[registry];
-        return uint256(reg.remaining);
-    }
-
-    /**
-     * @notice Checks if the caller has already signed off on a registry initialization.
-     * * DIAGRAMMATIC FLOW:
-     * 1. Query Registry struct for the specific target.
-     * 2. Check nested mapping: hasValidated[msg.sender].
-     * 3. Result: true if caller already voted (Prevents double-signing).
-     */
-    function _hasValidatedRegistry(address registry) external view returns (bool) {
-        Registry storage reg = _registry[registry];
-        return reg.hasValidated[sender()];
-    }
-
     // ─────────────────────────────────────────────────────────────────────────
     // VALIDATOR UPDATE TRACKING
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Returns the remaining signatures needed for a validator set update.
-     * * DIAGRAMMATIC FLOW:
-     * 1. Access _updateValidator[_addr] Storage Slot.
-     * 2. Load 'remaining' counter.
-     * 3. If 0, the update is ready for execution/finalization.
+     * @notice Retrieves the number of remaining signatures required for a validator update to reach quorum.
+     * @dev Reads the 'remaining' field from the ValidatorUpdateRequest struct associated with the address.
+     * @param _addr The address of the validator subject to the update.
+     * @return The count of additional unique signatures needed.
      */
     function _validatorValidationCountRemains(address _addr) external view returns (uint256) {
         ValidatorUpdateRequest storage update = _updateValidator[_addr];
@@ -54,11 +26,10 @@ abstract contract MultiSigHelper is MultiSigModifier {
     }
 
     /**
-     * @notice Checks if the caller has signed off on a specific validator change.
-     * * DIAGRAMMATIC FLOW:
-     * 1. Access ValidatorUpdateRequest struct.
-     * 2. Query hasValidated[sender()].
-     * 3. Ensures consensus is built from unique signatures.
+     * @notice Checks if the message sender has already cast a vote for a specific validator update.
+     * @dev Queries the hasValidated mapping within the ValidatorUpdateRequest struct.
+     * @param _addr The address of the validator subject to the update.
+     * @return True if the sender has already validated the update, false otherwise.
      */
     function _hasValidatedValidatorUpdate(address _addr) external view returns (bool) {
         ValidatorUpdateRequest storage update = _updateValidator[_addr];
@@ -70,16 +41,44 @@ abstract contract MultiSigHelper is MultiSigModifier {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Verifies if an address is currently recognized as a recovery entity.
-     * * DIAGRAMMATIC FLOW:
-     * 1. Sload from _recovery[address] mapping.
-     * 2. Returns true if the address holds active recovery permissions.
+     * @notice Verifies if a specific address has recovery privileges.
+     * @dev Returns the boolean value stored in the _recovery mapping for the given address.
+     * @param recovery The address to check for recovery permissions.
+     * @return True if the address is a recognized recovery entity.
      */
     function isRecovery(address recovery) external view returns (bool) {
         return _recovery[recovery];
     }
 
+    /**
+     * @notice Verifies if a specific address is currently an active validator.
+     * @dev Returns the boolean value stored in the _isValidator mapping.
+     * @param validator The address to check for validator status.
+     * @return True if the address is an active validator.
+     */
     function isValidator(address validator) external view returns (bool) {
         return _isValidator[validator];
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // TYPE CONVERSION UTILITIES
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * @dev Converts a string namespace to a bytes16 format.
+     * @param nspace The string representation of the namespace.
+     * @return _nspace The resulting bytes16 value.
+     */
+    function _toBytes16(string memory nspace) internal pure returns (bytes16 _nspace) {
+        _nspace = bytes16(bytes(nspace));
+    }
+
+    /**
+     * @dev Converts a uint256 number to a bytes1 format.
+     * @param num The number to be converted.
+     * @return _num The resulting bytes1 value.
+     */
+    function _toBytes1(uint256 num) internal pure returns (bytes1 _num) {
+        _num = bytes1(uint8(num));
     }
 }

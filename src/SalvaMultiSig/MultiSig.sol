@@ -11,18 +11,8 @@ import {RegistryFactory} from "@RegistryFactory/RegistryFactory.sol";
 /**
  * @title Salva Administrative MultiSig
  * @author cboi@Salva
- * @notice Governs protocol-level administrative actions including namespace
- * registration, validator set management, and backend signer rotation.
- * @dev Implements majority-based quorum consensus with a mandatory 48-hour
- * security timelock on all proposals before execution.
- *
- * Upgradeable via UUPS — upgrade authorization is gated behind the same
- * validator quorum as all other administrative actions.
- *
- * Deployment flow:
- * 1. Deploy implementation -> call initialize through proxy.
- * 2. Call setSingletonAndFactory to wire up the singleton and factory.
- * 3. All subsequent governance flows through proposal -> validate -> execute.
+ * @notice Central governance contract for managing protocol validators, singleton upgrades, and registry deployments.
+ * @dev Implements a majority-based voting system with a timelock mechanism for validator updates and atomic execution for registry management.
  */
 contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
     // ─────────────────────────────────────────────────────────────────────────
@@ -30,21 +20,15 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @dev Disables direct initialization of the implementation contract.
-     * Initialization must go through the UUPS proxy.
+     * @dev Ensures the implementation contract cannot be initialized directly.
      */
     constructor() {
         _disableInitializers();
     }
 
     /**
-     * @notice Bootstraps the MultiSig with the proxy deployer as the first validator.
-     * @dev Called once through the proxy immediately after deployment.
-     * Sets the deployer as an active validator and seeds the validator count.
-     *
-     * Bootstrap sequence:
-     * 1. _isValidator[sender()] = true
-     * 2. _numOfValidators       = 1
+     * @notice Initializes the proxy with the deployer as the initial validator.
+     * @dev Sets _isValidator and _recovery for the caller and initializes _numOfValidators to 1.
      */
     function initialize() external initializer {
         _isValidator[sender()] = true;
@@ -53,11 +37,10 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
     }
 
     /**
-     * @notice Wires the MultiSig to the Salva singleton and registry factory.
-     * @dev Write-once guard — reverts if either address has already been set.
-     * Must be called after deployment before any registry proposals can be made.
-     * @param singleton  Address of the deployed Salva singleton proxy.
-     * @param factory    Address of the deployed RegistryFactory.
+     * @notice Links the MultiSig to the Salva singleton and Registry factory.
+     * @dev Reverts if the singleton and factory addresses have already been set.
+     * @param singleton The address of the Salva singleton contract.
+     * @param factory The address of the RegistryFactory contract.
      */
     function setSingletonAndFactory(address singleton, address factory) external onlyValidators {
         if (_salvaSingleton != address(0) && _registryFactory != address(0)) revert Errors__Already_Set();
@@ -66,122 +49,15 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // REGISTRY PROPOSALS
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * @notice Opens a proposal to register a new namespace and initialize its registry.
-     * @dev Computes the required quorum as floor((validators - 1) / 2) + 1 (simple majority).
-     * The namespace string is converted to bytes16 and stored alongside the registry address.
-     *
-     * Proposal state transitions:
-     * unproposed -> proposed -> validated (timelock) -> executed
-     *
-     * @param _nspace   Namespace string to register (e.g. "coinbase"). Max 16 bytes.
-     * @param registry  Address of the registry clone to initialize under this namespace.
-     * @return          Registry address, namespace string, bytes16 handle, and required quorum.
-     */
-    function proposeInitialization(string memory _nspace, address registry)
-        public
-        onlyValidators
-        enforceBytes16(_nspace)
-        returns (address, string memory, bytes16, uint32)
-    {
-        Registry storage reg = _registry[registry];
-        if (reg.isProposed || reg.isExecuted) revert Errors__Registry_Init_Proposed();
-
-        bytes16 toBytes = bytes16(bytes(_nspace));
-        uint32 required = uint32((_numOfValidators - 1) / 2) + 1;
-
-        reg.registryAddress = registry;
-        reg.nspace = toBytes;
-        reg.len = bytes1(uint8(bytes(_nspace).length));
-        reg.requiredValidationCount = required;
-        reg.remaining = required;
-        reg.isProposed = true;
-
-        emit RegistryInitializationProposed(registry, _nspace, toBytes);
-        return (registry, _nspace, toBytes, required);
-    }
-
-    /**
-     * @notice Casts a validator vote to approve a pending registry proposal.
-     * @dev Once the vote count reaches quorum — or if the caller is a recovery address —
-     * the 48-hour timelock is started and the proposal is marked validated.
-     * Each validator may vote only once per proposal.
-     *
-     * @param registry  Address of the registry whose proposal is being voted on.
-     * @return          Registry address, namespace bytes16 handle, and remaining votes needed.
-     */
-    function validateRegistry(address registry) external onlyValidators returns (address, bytes16, uint32) {
-        Registry storage reg = _registry[registry];
-        address _sender = sender();
-        if (!reg.isProposed) revert Errors__Registry_Init_Not_Proposed();
-        if (reg.hasValidated[_sender]) revert Errors__Has_Validated();
-
-        reg.hasValidated[_sender] = true;
-        reg.validationCount++;
-
-        if (reg.validationCount >= reg.requiredValidationCount || _recovery[_sender]) {
-            reg.timeLock = block.timestamp + _TIME_INTERVAL;
-            reg.isValidated = true;
-        }
-
-        uint32 remainingValidation = reg.requiredValidationCount - reg.validationCount;
-        reg.remaining = remainingValidation;
-        emit RegistryValidated(registry, reg.nspace, remainingValidation);
-        return (registry, reg.nspace, remainingValidation);
-    }
-
-    /**
-     * @notice Executes a validated registry proposal after the 48-hour timelock has elapsed.
-     * @dev Calls initializeRegistry on the singleton, permanently binding the namespace
-     * to the registry address in singleton storage.
-     *
-     * Execution flow:
-     * [ Quorum Met ] --(48h timelock)--> [ executeInit ] --> [ Singleton.initializeRegistry ]
-     *
-     * @param registry  Address of the registry to finalize.
-     * @return bool     True on successful initialization.
-     */
-    function executeInit(address registry) external onlyValidators returns (bool) {
-        Registry storage reg = _registry[registry];
-        if (!reg.isValidated || block.timestamp < reg.timeLock) {
-            revert Error__Invalid_Or_Not_Enough_Time();
-        }
-        reg.isValidated = false;
-        reg.isExecuted = true;
-
-        emit InitializationSuccess(registry, reg.nspace);
-        return _executeInit(registry, reg.nspace, reg.len);
-    }
-
-    /**
-     * @notice Cancels a pending registry proposal and wipes its storage.
-     * @dev Circuit breaker — deletes the entire Registry struct from the mapping.
-     * The registry address can be re-proposed after cancellation.
-     * @param registry  Address of the registry proposal to cancel.
-     * @return bool     True on successful cancellation.
-     */
-    function cancelInit(address registry) external onlyValidators returns (bool) {
-        Registry storage reg = _registry[registry];
-        reg.hasValidated[sender()] = false;
-        delete _registry[registry];
-        emit RegistryInitializationCancelled(registry);
-        return true;
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
     // VALIDATOR SET MANAGEMENT
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Opens a proposal to add or remove a validator from the active set.
-     * @dev Quorum is computed at proposal time from the current validator count.
-     * action = true adds the address; action = false removes it.
-     * @param _addr    Target address to add or remove.
-     * @param _action  True to add, false to remove.
-     * @return         Target address, action flag, and required quorum.
+     * @notice Creates a proposal to add or remove a validator.
+     * @dev Calculates the required quorum based on the current validator count.
+     * @param _addr The address of the target validator.
+     * @param _action Boolean flag: true to add, false to remove.
+     * @return The target address, the action type, and the calculated quorum required.
      */
     function proposeValidatorUpdate(address _addr, bool _action)
         external
@@ -203,11 +79,10 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
     }
 
     /**
-     * @notice Casts a validator vote to approve a pending validator update proposal.
-     * @dev Mirrors the registry validation flow — quorum or recovery address triggers
-     * the 48-hour timelock. Each validator may vote only once per proposal.
-     * @param _addr  Target address of the validator update being voted on.
-     * @return       Target address, action flag, and remaining votes needed.
+     * @notice Records a validator's vote for a pending validator update.
+     * @dev Triggers a timelock if quorum is reached or if the caller is a recovery address.
+     * @param _addr The address subject to the validator update proposal.
+     * @return The target address, action type, and remaining votes needed.
      */
     function validateValidator(address _addr) external onlyValidators returns (address, bool, uint32) {
         ValidatorUpdateRequest storage update = _updateValidator[_addr];
@@ -230,11 +105,10 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
     }
 
     /**
-     * @notice Executes a validated validator update after the 48-hour timelock has elapsed.
-     * @dev Adds or removes the target address from the validator set and adjusts
-     * _numOfValidators accordingly, which affects future quorum calculations.
-     * @param _addr  Target address of the validator update to finalize.
-     * @return bool  True on successful execution.
+     * @notice Finalizes a validated validator update after the timelock expires.
+     * @dev Updates the validator mapping and increments/decrements the total validator count.
+     * @param _addr The address of the validator being updated.
+     * @return Success status of the internal update execution.
      */
     function executeUpdateValidator(address _addr) external onlyValidators returns (bool) {
         ValidatorUpdateRequest storage update = _updateValidator[_addr];
@@ -249,9 +123,9 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
     }
 
     /**
-     * @notice Cancels a pending validator update proposal and wipes its storage.
-     * @param _addr  Target address of the validator update to cancel.
-     * @return bool  True on successful cancellation.
+     * @notice Cancels a proposed validator update and clears the stored request data.
+     * @param _addr The address of the validator update to be cancelled.
+     * @return Boolean true upon successful cancellation.
      */
     function cancelValidatorUpdate(address _addr) external onlyValidators returns (bool) {
         ValidatorUpdateRequest storage update = _updateValidator[_addr];
@@ -266,12 +140,11 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Grants or revokes recovery privileges for an address.
-     * @dev Recovery addresses can bypass quorum and trigger the timelock immediately
-     * on any proposal. Intended for emergency response scenarios.
-     * @param recovery  Address to grant or revoke recovery privileges.
-     * @param _action   True to grant, false to revoke.
-     * @return bool     True on success.
+     * @notice Updates the recovery status for a specified address.
+     * @dev Recovery addresses can bypass standard quorum checks in validation flows.
+     * @param recovery The target address to modify.
+     * @param _action Boolean flag to set or unset recovery status.
+     * @return Boolean true upon success.
      */
     function updateRecovery(address recovery, bool _action) external onlyValidators returns (bool) {
         _recovery[recovery] = _action;
@@ -283,59 +156,46 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Triggers a UUPS upgrade on the Salva singleton implementation.
-     * @dev Bypasses the standard proposal flow — validators call this directly
-     * for critical hotfixes. The singleton's own _authorizeUpgrade enforces
-     * that only the MultiSig can initiate this call.
-     * @param newImpl  Address of the new singleton implementation.
-     * @param data     Optional calldata forwarded to the new implementation post-upgrade.
+     * @notice Authorizes a UUPS upgrade for the Salva singleton contract.
+     * @param newImpl The address of the new singleton implementation.
+     * @param data Calldata for initialization or migration on the new implementation.
      */
     function upgradeSingleton(address newImpl, bytes memory data) external onlyValidators {
         ISalvaSingleton(_salvaSingleton).upgradeToAndCall(newImpl, data);
     }
 
     /**
-     * @notice Rotates the Salva backend signer on the RegistryFactory.
-     * @dev A single call here propagates the new signer to every deployed registry
-     * clone instantly — no per-registry updates required.
-     * Use immediately if the backend signer key is suspected compromised.
-     * @param newSigner  Replacement backend signer EOA.
-     * @return bool      True on success.
+     * @notice Updates the authorized signer in the RegistryFactory.
+     * @param newSigner The new address to be used for signature verification.
+     * @return Boolean status of the factory signer update.
      */
     function updateSigner(address newSigner) external onlyValidators returns (bool) {
         return RegistryFactory(_registryFactory)._updateSigner(newSigner);
     }
 
     /**
-     * @notice Deploys a new registry clone and immediately opens an initialization proposal.
-     * @dev Combines RegistryFactory.deployRegistry and proposeInitialization into a
-     * single atomic transaction to reduce governance overhead when onboarding new namespaces.
-     * @param namespace  Namespace string for the new registry (e.g. "coinbase").
-     * @return _clone    Address of the newly deployed registry clone.
+     * @notice Deploys a new registry and initializes it within the singleton in one call.
+     * @dev Performs atomic deployment via the factory and registration in the singleton.
+     * @param namespace The string namespace for the registry.
+     * @return _clone The address of the newly deployed registry clone.
      */
-    function deployAndProposeInit(string memory namespace) external onlyValidators returns (address _clone) {
-        address clone = RegistryFactory(_registryFactory).deployRegistry(address(_salvaSingleton), namespace);
-        if (clone != address(0)) {
-            (_clone,,,) = proposeInitialization(namespace, clone);
-        } else {
-            _clone = clone;
-        }
+    function deployAndInitRegistry(string memory namespace)
+        external
+        onlyValidators
+        enforceBytes16(namespace)
+        returns (address _clone)
+    {
+        _clone = RegistryFactory(_registryFactory).deployRegistry(address(_salvaSingleton), namespace);
+        ISalvaSingleton(_salvaSingleton)
+            .initializeRegistry(_clone, _toBytes16(namespace), _toBytes1(bytes(namespace).length));
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // INTERNAL
+    // INTERNAL & UTILITY
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @dev Calls initializeRegistry on the singleton to finalize a namespace binding.
-     */
-    function _executeInit(address registry, bytes16 _nspace, bytes1 _len) internal returns (bool) {
-        ISalvaSingleton(_salvaSingleton).initializeRegistry(registry, _nspace, _len);
-        return true;
-    }
-
-    /**
-     * @dev Adds or removes a validator and adjusts the total validator count.
+     * @dev Internal logic to modify validator state and the total number of validators.
      */
     function _executeUpdateValidator(address _addr, bool _action) internal returns (bool) {
         if (_action) {
@@ -349,14 +209,16 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
     }
 
     /**
-     * @dev Withdraws tokens from the singleton to a receiver address.
+     * @notice Withdraws tokens from the singleton to a receiver address.
+     * @param _token The address of the token to withdraw.
+     * @param _receiver The destination address for the tokens.
      */
     function withdraw(address _token, address _receiver) external onlyValidators {
         ISalvaSingleton(_salvaSingleton).withdraw(_token, _receiver);
     }
 
     /**
-     * @dev UUPS upgrade authorization — restricted to active validators.
+     * @dev Function that reverts if called by any non-validator account during a UUPS upgrade.
      */
     function _authorizeUpgrade(address newImplementation) internal override onlyValidators {}
 }

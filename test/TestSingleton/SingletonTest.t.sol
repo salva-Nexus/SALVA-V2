@@ -26,13 +26,11 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
 
         _changePrank(owner);
         usdc = address(new MockUSDC());
-        vm.deal(EOA, 5 ether);
-        vm.deal(owner, 5 ether);
     }
 
-    function test_Initialize() external initialized {
-        (bytes32 s,) = singleton.namespace(address(registry));
-        assertNotEq(s, bytes32(0));
+    function test_Initialize() external view {
+        (bytes16 s,) = singleton.namespace(address(registry));
+        assertEq(s, bytes16("@salva"));
     }
 
     function test_Only_MultiSig_Can_Initialize() external prank(address(registry)) {
@@ -40,22 +38,22 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         singleton.initializeRegistry(address(registry), "@salva", bytes1(0x06));
     }
 
-    function test_link_With_Signature() external initialized {
-        bytes memory _name = bytes("zz_aaa");
+    function test_link_With_Signature() external {
+        bytes memory _name = bytes("charles_cboi@");
         _start(_name, owner, owner, owner, 0);
 
-        assertEq(singleton.resolveAddress(bytes("zz_aaa@salva")), owner);
+        assertEq(singleton.resolveAddress(bytes("charles_cboi@salva")), owner);
         // assertEq(singleton.resolveAddress(bytes("charles_okoronkwo@salva")), owner);
     }
 
-    function test_link_From_External_Source() external initialized {
+    function test_link_From_External_Source() external {
         // SHOULD REVERT
         bytes memory _name = bytes("okoronkwo_charles");
         bytes4 revertSelector = Errors.Errors__Invalid_Call_Source.selector;
         _start(_name, EOA, EOA, EOA, revertSelector);
     }
 
-    function test_Unlink_Name() external initialized {
+    function test_Unlink_Name() external {
         _changePrank(owner);
         _transfer(EOA);
 
@@ -73,7 +71,7 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         console.log(unlinked);
     }
 
-    function test_Phishing_Resistance() external initialized {
+    function test_Phishing_Resistance() external {
         bytes memory _name = bytes("cboi");
         _start(_name, EOA, owner, owner, 0);
 
@@ -93,13 +91,13 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         _start(_name2, makeAddr("EOA2"), owner, makeAddr("EOA2"), revertSelector2);
     }
 
-    function test_Only_Registry_Can_Call_Singleton_Directly() external initialized {
+    function test_Only_Registry_Can_Call_Singleton_Directly() external {
         bytes memory _name = bytes("okoronkwo_charles");
         vm.expectRevert(Errors.Errors__Not_Registered.selector);
         singleton.linkNameAlias(_name, EOA, EOA);
     }
 
-    function test_Linked_Name_Cannot_Be_Reused() external initialized {
+    function test_Linked_Name_Cannot_Be_Reused() external {
         bytes memory _name = bytes("okoronkwo_charles");
         _start(_name, owner, owner, owner, 0);
         _transfer(EOA);
@@ -108,17 +106,16 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         _start(_name, EOA, owner, EOA, expectedRevert);
     }
 
-    function test_Name_Not_Exceeding_32_Bytes() external initialized {
+    function test_Name_Not_Exceeding_32_Bytes() external {
         bytes memory _name = bytes("my_name_is_long_and_cause_this_to_revert");
         bytes4 expectedRevert = Errors.Errors__Max_Name_Length_Exceeded.selector;
         _start(_name, owner, owner, owner, expectedRevert);
     }
 
-    function test_Arbitrary() external initialized {
+    function test_Arbitrary() external {
         // length manipulation, extra length
         // should revert, cus extra data is 0
         _changePrank(address(registry));
-        vm.deal(address(registry), 5 ether);
         bytes memory data1 =
             hex"85b830a60000000000000000000000000000000000000000000000000000000000000060000000000000000000000000f2b2ade8117d3d777a679e73e60795a7e6771f19000000000000000000000000f2b2ade8117d3d777a679e73e60795a7e6771f190000000000000000000000000000000000000000000000000000000000000012636861726c65735f6f6b6f726f6e6b776f000000000000000000000000000000";
 
@@ -133,7 +130,7 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         assertEq(success2, false);
     }
 
-    function test_arbitrary_User_Cannot_Unlink_Another_User() external initialized {
+    function test_arbitrary_User_Cannot_Unlink_Another_User() external {
         bytes memory _name = bytes("okoronkwo_charles");
         _start(_name, owner, owner, owner, 0);
 
@@ -142,7 +139,7 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         registry.unlink(_name);
     }
 
-    function test_Upgrade() external initialized {
+    function test_Upgrade() external {
         bytes memory _name = bytes("okoronkwo_charles");
         _start(_name, owner, owner, owner, 0);
 
@@ -156,7 +153,7 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         assertEq(registry.resolveAddress(bytes("okoronkwo_buchi@salva")), EOA);
     }
 
-    function test_Upgrade2() external initialized {
+    function test_Upgrade2() external {
         // Only Multi-Sig
         Singleton singleton2 = new Singleton();
         _changePrank(EOA);
@@ -164,7 +161,7 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         multisig.upgradeSingleton(payable(address(singleton2)), "");
     }
 
-    function test_updateSigner() external initialized {
+    function test_updateSigner() external {
         bytes memory _name = bytes("okoronkwo_charles");
         _start(_name, owner, owner, owner, 0);
 
@@ -179,7 +176,7 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         _start(_name3, EOA, EOA, EOA, 0);
     }
 
-    function test_Withdrawal() external initialized {
+    function test_Withdrawal() external {
         bytes memory _name = bytes("okoronkwo_charles");
         _start(_name, owner, owner, owner, 0);
         _transfer(EOA);
@@ -187,7 +184,7 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         bytes memory _name2 = bytes("okoronkwo_joe");
         _start(_name2, EOA, owner, EOA, 0);
 
-        assertEq(IERC20(usdc).balanceOf(address(singleton)), 2e6);
+        assertEq(IERC20(usdc).balanceOf(address(singleton)), 1e6);
 
         vm.expectRevert(Errors.Errors__Not_Authorized.selector);
         multisig.withdraw(address(usdc), makeAddr("reciever"));
@@ -195,11 +192,11 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         _changePrank(owner);
         multisig.withdraw(address(usdc), makeAddr("reciever"));
 
-        assertEq(IERC20(usdc).balanceOf(makeAddr("reciever")), 2e6);
+        assertEq(IERC20(usdc).balanceOf(makeAddr("reciever")), 1e6);
         assertEq(IERC20(usdc).balanceOf(address(singleton)), 0);
     }
 
-    function test_Replay() external initialized {
+    function test_Replay() external {
         bytes memory _name = bytes("okoronkwo_charles");
         _start(_name, owner, owner, owner, 0);
 
@@ -217,7 +214,7 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
         _start(_name, owner, owner, replayer, selector);
     }
 
-    function test_Registry_Corruption_Does_Not_Affect_Singleton() external initialized {
+    function test_Registry_Corruption_Does_Not_Affect_Singleton() external {
         bytes memory _name = bytes(
             "okoronkwo_charles_is_not_up_to_64_bytes_but_i_will_make_it_reach_that_length_just_to_see_what_happens_in_the_registry"
         );

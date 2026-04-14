@@ -57,7 +57,7 @@ contract DeploySingleton is Script {
         RegistryFactory factory =
             new RegistryFactory(address(new BaseRegistry()), address(wrappedMultiSig), deployer, address(0x123));
         wrappedMultiSig.setSingletonAndFactory(address(wrappedSingleton), address(factory));
-        BaseRegistry salvaregistry = BaseRegistry(wrappedMultiSig.deployAndProposeInit("@salva"));
+        BaseRegistry salvaregistry = BaseRegistry(wrappedMultiSig.deployAndInitRegistry("@salva"));
 
         return (wrappedSingleton, wrappedMultiSig, salvaregistry, deployer, deployerKey);
     }
@@ -80,7 +80,6 @@ contract DeploySingleton is Script {
         RegistryFactory factory =
             new RegistryFactory(address(new BaseRegistry()), address(wrappedMultiSig), backend, ngns);
         wrappedMultiSig.setSingletonAndFactory(address(wrappedSingleton), address(factory));
-        // BaseRegistry registry = BaseRegistry(wrappedMultiSig.deployAndProposeInit("@salva"));
 
         console.log("SINGETON: ", address(wrappedSingleton));
         //console.log("REGISTRY", address(registry));

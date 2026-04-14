@@ -99,23 +99,13 @@ Name-order squatting becomes economically pointless. There is nothing to squat.
 
 ### 💰 Permanent and Affordable
 
-Registration is a **one-time fee of $1 USD** paid in USDC or USDT. No renewals. No annual subscriptions. No gas surprises. You pay once and the alias is yours until you choose to unlink it.
+Registration is a **one-time fee** paid in USDC, USDT or NGNs.
 
 ---
 
 ## 🗺️ How It Works
 
-### 1. Namespace Governance (The Guardians)
-
-Before an app can name its users, it must be approved by the Salva guardian network:
-
-```
-Validator proposes namespace → Quorum validates → 24h timelock → executeInit
-```
-
-The 24-hour window gives the guardian set time to detect fraudulent claims before they are written to the Singleton. Once executed, the namespace is live and immutable.
-
-### 2. App Gateways (Registries)
+### 1. App Gateways (Registries)
 
 Each approved namespace gets an isolated **Registry** — a minimal proxy clone deployed by the `RegistryFactory`. The registry is the only authorized caller for its namespace slot in the Singleton.
 
@@ -126,13 +116,13 @@ RegistryFactory.deployRegistry(@coinbase)
   → returns registry address to MultiSig
 ```
 
-### 3. Signature Authorization Gate
+### 2. Signature Authorization Gate
 
 Every `link` call must carry a valid ECDSA signature from the Salva backend signer. This ensures all registrations pass the off-chain reserved-name whitelist check before touching the chain — without making the registry permissioned or breaking the user's `msg.sender` identity.
 
 The signer address is read from the `RegistryFactory` on every call, so key rotation propagates instantly to all registries with no per-clone update.
 
-### 4. Name Registration Flow
+### 3. Name Registration Flow
 
 ```
 User Safe
@@ -148,15 +138,15 @@ User Safe
                           └── _performLinkToWallet(key, wallet) → sstore
 ```
 
-### 5. Resolution (Instant)
+### 4. Resolution (Instant)
 
 ```
-resolveAddress("alice@salva") → keccak256("alice@salva") → sload → 0x123...abc
+resolveAddress("alice@salva") → keccak256("alice@salva") → 0x123...abc
 ```
 
 One function call. One storage slot. Deterministic.
 
-### 6. Name Resolution Table
+### 5. Name Resolution Table
 
 | Name Alias            | Namespace      | Resolves To         |
 | :-------------------- | :------------- | :------------------ |
@@ -165,60 +155,6 @@ One function call. One storage slot. Deterministic.
 | `miracle`             | `@salva`       | `0x789...ghi`       |
 | `miracle_business`    | `@coinbase`    | `0xabc...jkl`       |
 | `aggregatorv3_base`   | `@chainlink`   | `0xaggrv3...addr`   |
-
----
-
-## 🏗️ Contract Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                            GOVERNANCE LAYER                             │
-│                                                                         │
-│  MultiSig (Guardians)                                                   │
-│    └── deployAndProposeInit(namespace)                                  │
-│          ├── RegistryFactory.deployRegistry() → clone address           │
-│          └── proposeInitialization(namespace, clone)                    │
-│                └── validateRegistry × N  →  24h timelock               │
-│                      └── executeInit()                                  │
-│                            └── Singleton.initializeRegistry(...)        │
-└─────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────┐
-│                          REGISTRATION LAYER                             │
-│                                                                         │
-│  User Safe (msg.sender throughout via MultiSend delegatecall)           │
-│    └── MultiSend                                                        │
-│          ├── feeToken.approve(registry, 1e6)                            │
-│          └── BaseRegistry.link(name, wallet, feeToken, signature)       │
-│                ├── ecrecover(sig) == RegistryFactory.getSigner()  ✓     │
-│                ├── IERC20(feeToken).safeTransferFrom(Safe, Singleton)   │
-│                └── Singleton.linkNameAlias(name, wallet, Safe)          │
-│                      ├── _normalizeAndValidate(name)                    │
-│                      ├── _computeNameHash(name, namespace) → key        │
-│                      └── _performLinkToWallet(key, wallet) → sstore     │
-└─────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────┐
-│                            UNLINK LAYER                                 │
-│                                                                         │
-│  User Safe                                                              │
-│    └── BaseRegistry.unlink(nameBytes)                                   │
-│          └── Singleton.unlink(name, Safe)                               │
-│                ├── _normalizeAndValidate(name)                          │
-│                ├── _computeNameHash(name, namespace) → key              │
-│                ├── _checkCaller(Safe, key) → ownership verify           │
-│                └── _performUnlink(key, ownerHash) → sstore(0x00)        │
-└─────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────┐
-│                          RESOLUTION LAYER                               │
-│                                                                         │
-│  Anyone                                                                 │
-│    └── BaseRegistry.resolveAddress("alice@salva")                       │
-│          └── Singleton.resolveAddress("alice@salva")                    │
-│                └── sload( keccak256("alice@salva") ) → 0x123...abc      │
-└─────────────────────────────────────────────────────────────────────────┘
-```
 
 ---
 

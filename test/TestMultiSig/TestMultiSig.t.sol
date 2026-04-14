@@ -11,18 +11,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 abstract contract TestMultiSig is BaseTest {
     using SafeERC20 for IERC20;
 
-    function test_Only_Active_Validator_Can_Propose() external {
-        _changePrank(EOA);
-        vm.expectRevert(abi.encodeWithSelector(Errors.Errors__Not_Authorized.selector));
-        multisig.proposeInitialization("@salva", address(registry));
-        vm.expectRevert(abi.encodeWithSelector(Errors.Errors__Not_Authorized.selector));
-        multisig.proposeValidatorUpdate(owner, false);
-    }
-
-    function test_Reject_Reproposal_Or_Validator_Update() external initialized proposeValidatorUpdate {
-        vm.expectRevert(abi.encodeWithSelector(Errors.Errors__Registry_Init_Proposed.selector));
-        multisig.proposeInitialization("@salva", address(registry));
-        //
+    function test_Reject_Reproposal_Or_Validator_Update() external proposeValidatorUpdate {
         vm.expectRevert(abi.encodeWithSelector(Errors.Errors__Validator_Update_Proposed.selector));
         multisig.proposeValidatorUpdate(makeAddr("val"), true);
     }
@@ -75,16 +64,12 @@ abstract contract TestMultiSig is BaseTest {
         multisig.executeUpdateValidator(makeAddr("val3"));
     }
 
-    function test_Stop_Execution() external proposeInit proposeValidatorUpdate {
-        multisig.validateRegistry(address(registry));
+    function test_Stop_Execution() external proposeValidatorUpdate {
         multisig.validateValidator(makeAddr("val"));
         // cancel before time passes
-        multisig.cancelInit(address(registry));
         multisig.cancelValidatorUpdate(makeAddr("val"));
         // Execution reverts
         vm.warp(block.timestamp + 48 hours);
-        vm.expectRevert(Errors.Error__Invalid_Or_Not_Enough_Time.selector);
-        multisig.executeInit(address(registry));
         vm.expectRevert(Errors.Error__Invalid_Or_Not_Enough_Time.selector);
         multisig.executeUpdateValidator(makeAddr("val"));
     }
@@ -104,16 +89,8 @@ abstract contract TestMultiSig is BaseTest {
 
     function test_deploy_Clones() external {
         _changePrank(owner);
-        address coinbaseReg = multisig.deployAndProposeInit("@coinbase");
-        address metamaskReg = multisig.deployAndProposeInit("@metamask");
-
-        multisig.validateRegistry(coinbaseReg);
-        multisig.validateRegistry(metamaskReg);
-
-        vm.warp(block.timestamp + 48 hours);
-        multisig.executeInit(coinbaseReg);
-        vm.warp(block.timestamp + 48 hours);
-        multisig.executeInit(metamaskReg);
+        address coinbaseReg = multisig.deployAndInitRegistry("@coinbase");
+        address metamaskReg = multisig.deployAndInitRegistry("@metamask");
 
         (bytes16 expectCoinbase,) = singleton.namespace(coinbaseReg);
         (bytes16 expectMetamask,) = singleton.namespace(metamaskReg);
@@ -128,16 +105,8 @@ abstract contract TestMultiSig is BaseTest {
 
     function test_New_Clones() external {
         _changePrank(owner);
-        address coinbaseReg = multisig.deployAndProposeInit("@coinbase");
-        address metamaskReg = multisig.deployAndProposeInit("@metamask");
-
-        multisig.validateRegistry(coinbaseReg);
-        multisig.validateRegistry(metamaskReg);
-
-        vm.warp(block.timestamp + 48 hours);
-        multisig.executeInit(coinbaseReg);
-        vm.warp(block.timestamp + 48 hours);
-        multisig.executeInit(metamaskReg);
+        address coinbaseReg = multisig.deployAndInitRegistry("@coinbase");
+        address metamaskReg = multisig.deployAndInitRegistry("@metamask");
 
         address user1 = makeAddr("oc");
         address user2 = makeAddr("oj"); // 0xF023284F44A67F64c46E35d8bbdd5D9b39DCA4b2
@@ -155,24 +124,11 @@ abstract contract TestMultiSig is BaseTest {
         IERC20(usdc).approve(metamaskReg, 1e6);
         _link(bytes("okoronkwo_joe"), user2, signature2, metamaskReg, 0);
 
-        assertEq(BaseRegistry(coinbaseReg).resolveAddress("okoronkwo_charles@coinbase"), user1);
-        assertEq(BaseRegistry(coinbaseReg).resolveAddress("charles_okoronkwo@coinbase"), user1);
-        assertNotEq(BaseRegistry(coinbaseReg).resolveAddress("okoronkwo_charles@metamask"), user1);
-        assertEq(BaseRegistry(metamaskReg).resolveAddress("okoronkwo_joe@metamask"), user2);
-        assertEq(BaseRegistry(metamaskReg).resolveAddress("joe_okoronkwo@metamask"), user2);
-        assertNotEq(BaseRegistry(coinbaseReg).resolveAddress("okoronkwo_joe@coinbase"), user2);
-    }
-
-    function test_Recovery_Can_Bypass_Quorum() external {
-        _changePrank(owner);
-        address rec = makeAddr("rec");
-        multisig.updateRecovery(rec, true);
-        address coinbaseReg = multisig.deployAndProposeInit("@coinbase");
-
-        _changePrank(rec);
-        multisig.validateRegistry(coinbaseReg);
-
-        vm.warp(block.timestamp + 48 hours);
-        multisig.executeInit(coinbaseReg);
+        assertEq(BaseRegistry(coinbaseReg).resolveAddress(bytes("okoronkwo_charles@coinbase")), user1);
+        assertEq(BaseRegistry(coinbaseReg).resolveAddress(bytes("charles_okoronkwo@coinbase")), user1);
+        assertNotEq(BaseRegistry(coinbaseReg).resolveAddress(bytes("okoronkwo_charles@metamask")), user1);
+        assertEq(BaseRegistry(metamaskReg).resolveAddress(bytes("okoronkwo_joe@metamask")), user2);
+        assertEq(BaseRegistry(metamaskReg).resolveAddress(bytes("joe_okoronkwo@metamask")), user2);
+        assertNotEq(BaseRegistry(coinbaseReg).resolveAddress(bytes("okoronkwo_joe@coinbase")), user2);
     }
 }

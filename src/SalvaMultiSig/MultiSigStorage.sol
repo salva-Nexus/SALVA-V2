@@ -68,46 +68,6 @@ abstract contract MultiSigStorage {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice State for a single registry namespace initialization proposal.
-     * @dev Packed layout minimizes SLOAD/SSTORE costs:
-     *        · `registryAddress` + `nspace` + `len` fit in two slots.
-     *        · Three uint32 counters share one slot.
-     *        · `hasValidated` is a nested mapping — each entry is a separate slot.
-     *        · `timeLock` + flags occupy the final slots.
-     *
-     *      Proposal lifecycle:
-     *        unproposed → proposed → validated (timelock starts) → executed
-     *
-     * @param registryAddress         The registry clone to be initialized.
-     * @param nspace                  bytes16 namespace handle (e.g. `0x4073616c766100…`).
-     * @param len                     Byte length of the namespace string.
-     * @param validationCount         Number of validator votes cast so far.
-     * @param requiredValidationCount Quorum threshold computed at proposal time.
-     * @param remaining               Votes still needed to reach quorum.
-     * @param isProposed              True once the proposal has been opened.
-     * @param hasValidated            Tracks which validators have already voted.
-     * @param timeLock                Earliest timestamp at which execution is permitted.
-     * @param isValidated             True once quorum has been reached.
-     * @param isExecuted              True once the proposal has been finalized.
-     */
-    struct Registry {
-        address registryAddress;
-        bytes16 nspace;
-        bytes1 len;
-        uint32 validationCount;
-        uint32 requiredValidationCount;
-        uint32 remaining;
-        bool isProposed;
-        mapping(address => bool) hasValidated;
-        uint256 timeLock;
-        bool isValidated;
-        bool isExecuted;
-    }
-
-    /// @dev Maps each registry address to its active initialization proposal.
-    mapping(address => Registry) internal _registry;
-
-    /**
      * @notice State for a single validator set update proposal.
      * @dev Identical lifecycle to the Registry proposal.
      *      `action = true` adds the target; `action = false` removes it.
