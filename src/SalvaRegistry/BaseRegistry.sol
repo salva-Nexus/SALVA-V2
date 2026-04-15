@@ -41,6 +41,9 @@ contract BaseRegistry is Context, Errors {
      */
     bool internal initialized;
 
+    uint256 internal constant NGNsFEE = 500e6; // 500 NGNs with 6 decimals
+    uint256 internal constant USDFEE = 5e5; // 0.5 units for USDC/USDT with 6 decimals
+
     /**
      * @notice Emitted when a name is successfully linked to a wallet.
      * @param name The alias bytes.
@@ -116,7 +119,7 @@ contract BaseRegistry is Context, Errors {
         }
 
         // Tiered fee normalization: 500 units if paying in NGNs, 0.5 units for USDC/USDT.
-        uint256 fee = _feeToken == ngns ? 500e6 : 5e5;
+        uint256 fee = _feeToken == ngns ? NGNsFEE : USDFEE;
 
         IERC20(_feeToken).safeTransferFrom(_sender, singleton, fee);
         _isLinked = ISalvaSingleton(singleton).linkNameAlias(_name, _wallet, _sender);

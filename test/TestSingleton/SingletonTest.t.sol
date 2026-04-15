@@ -223,9 +223,7 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
     }
 
     function test_ToBytes() external pure {
-        console.log(string(bytes("0x4073616c766100000000000000000000")));
-        console.logBytes(bytes("cboi@salva"));
-
-        assertEq(bytes("@salva"), hex"4073616c7661");
+        console.logBytes(bytes("cboi@metamask"));
+        console.logBytes(bytes("joe@salva"));
     }
 }

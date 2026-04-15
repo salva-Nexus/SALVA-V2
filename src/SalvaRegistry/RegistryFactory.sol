@@ -2,9 +2,8 @@
 pragma solidity ^0.8.30;
 
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
-import {Context} from "@Context/Context.sol";
 import {BaseRegistry} from "@BaseRegistry/BaseRegistry.sol";
-import {Errors} from "@Errors/Errors.sol";
+import {Modifier} from "@Modifier/Modifier.sol";
 
 /**
  * @title RegistryFactory
@@ -13,7 +12,7 @@ import {Errors} from "@Errors/Errors.sol";
  * @dev Serves as the global configuration layer. Proxies fetch the `signer` and `NGNs` address from this
  * contract dynamically, enabling instant protocol-wide updates via a single state change.
  */
-contract RegistryFactory is Context, Errors {
+contract RegistryFactory is Modifier {
     using Clones for address;
 
     /**
@@ -51,18 +50,6 @@ contract RegistryFactory is Context, Errors {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // ACCESS CONTROL
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * @dev Reverts if the caller is not the MultiSig.
-     */
-    modifier onlyMultiSig() {
-        _onlyMultiSig();
-        _;
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
     // REGISTRY DEPLOYMENT
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -75,7 +62,7 @@ contract RegistryFactory is Context, Errors {
      */
     function deployRegistry(address _singleton, string memory _namespace)
         external
-        onlyMultiSig
+        onlyMultiSig(MULTISIG)
         returns (address clone)
     {
         clone = IMPLEMENTATION.clone();
@@ -92,7 +79,7 @@ contract RegistryFactory is Context, Errors {
      * @param _newSigner The address of the new authorized backend signer.
      * @return bool True upon successful update.
      */
-    function _updateSigner(address _newSigner) external onlyMultiSig returns (bool) {
+    function _updateSigner(address _newSigner) external onlyMultiSig(MULTISIG) returns (bool) {
         signer = _newSigner;
         return true;
     }
@@ -109,18 +96,5 @@ contract RegistryFactory is Context, Errors {
      */
     function getSignerAndNGNs() external view returns (address, address) {
         return (signer, NGNs);
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // INTERNAL
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * @dev Internal helper for enforcing MultiSig-only access control.
-     */
-    function _onlyMultiSig() internal view {
-        if (sender() != MULTISIG) {
-            revert Errors__Not_Authorized();
-        }
     }
 }

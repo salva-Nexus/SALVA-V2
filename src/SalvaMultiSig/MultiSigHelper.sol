@@ -80,6 +80,7 @@ abstract contract MultiSigHelper is MultiSigModifier {
      * @return _num The resulting bytes1 value.
      */
     function _toBytes1(uint256 num) internal pure returns (bytes1 _num) {
+        // forge-lint: disable-next-line(unsafe-typecast)
         _num = bytes1(uint8(num));
     }
 }

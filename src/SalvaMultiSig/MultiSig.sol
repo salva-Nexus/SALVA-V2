@@ -135,44 +135,6 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
         return true;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // RECOVERY & EMERGENCY CONTROLS
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * @notice Updates the recovery status for a specified address.
-     * @dev Recovery addresses can bypass standard quorum checks in validation flows.
-     * @param recovery The target address to modify.
-     * @param _action Boolean flag to set or unset recovery status.
-     * @return Boolean true upon success.
-     */
-    function updateRecovery(address recovery, bool _action) external onlyValidators returns (bool) {
-        _recovery[recovery] = _action;
-        return true;
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // PROTOCOL UPGRADES & SIGNER ROTATION
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * @notice Authorizes a UUPS upgrade for the Salva singleton contract.
-     * @param newImpl The address of the new singleton implementation.
-     * @param data Calldata for initialization or migration on the new implementation.
-     */
-    function upgradeSingleton(address newImpl, bytes memory data) external onlyValidators {
-        ISalvaSingleton(_salvaSingleton).upgradeToAndCall(newImpl, data);
-    }
-
-    /**
-     * @notice Updates the authorized signer in the RegistryFactory.
-     * @param newSigner The new address to be used for signature verification.
-     * @return Boolean status of the factory signer update.
-     */
-    function updateSigner(address newSigner) external onlyValidators returns (bool) {
-        return RegistryFactory(_registryFactory)._updateSigner(newSigner);
-    }
-
     /**
      * @notice Deploys a new registry and initializes it within the singleton in one call.
      * @dev Performs atomic deployment via the factory and registration in the singleton.
@@ -217,6 +179,44 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
      */
     function withdraw(address _token, address _receiver) external onlyValidators {
         ISalvaSingleton(_salvaSingleton).withdraw(_token, _receiver);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // RECOVERY & EMERGENCY CONTROLS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * @notice Updates the recovery status for a specified address.
+     * @dev Recovery addresses can bypass standard quorum checks in validation flows.
+     * @param recovery The target address to modify.
+     * @param _action Boolean flag to set or unset recovery status.
+     * @return Boolean true upon success.
+     */
+    function updateRecovery(address recovery, bool _action) external onlyValidators returns (bool) {
+        _recovery[recovery] = _action;
+        return true;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PROTOCOL UPGRADES & SIGNER ROTATION
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * @notice Authorizes a UUPS upgrade for the Salva singleton contract.
+     * @param newImpl The address of the new singleton implementation.
+     * @param data Calldata for initialization or migration on the new implementation.
+     */
+    function upgradeSingleton(address newImpl, bytes memory data) external onlyValidators {
+        ISalvaSingleton(_salvaSingleton).upgradeToAndCall(newImpl, data);
+    }
+
+    /**
+     * @notice Updates the authorized signer in the RegistryFactory.
+     * @param newSigner The new address to be used for signature verification.
+     * @return Boolean status of the factory signer update.
+     */
+    function updateSigner(address newSigner) external onlyValidators returns (bool) {
+        return RegistryFactory(_registryFactory)._updateSigner(newSigner);
     }
 
     /**

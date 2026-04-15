@@ -140,9 +140,6 @@ abstract contract NameLib is Modifier, Storage {
                         // when the rest of the chars use mstore8..
                         // This is to prevent redundant mstore on 32bytes mem slot when there's nothing there..
                         // first char mstore makes the memory clean.
-
-                        // remove redundant shift
-                        // comparison works the same on both lower and higher part
                         switch eq(cursor, 0x00)
                         case 0x01 {
                             mstore(add(0x00, cursor), char)
