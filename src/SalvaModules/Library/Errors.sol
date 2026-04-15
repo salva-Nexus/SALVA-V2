@@ -71,9 +71,6 @@ abstract contract Errors {
     /// @dev Attached ETH value is below the required registration fee.
     error Errors__Not_Enough_Fee();
 
-    /// @dev Price feed returned a stale or invalid answer.
-    error Errors__Invalid_price();
-
     /// @dev Low-level singleton call failed.
     error Errors_Failed();
 
