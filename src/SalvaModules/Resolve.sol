@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {NameLib} from "@NameLib/NameLib.sol";
+import { NameLib } from "@NameLib/NameLib.sol";
 
 /**
  * @title Resolve
@@ -78,7 +78,11 @@ abstract contract Resolve is NameLib {
      * @return namespaceHandle The bytes16 handle (e.g., "@salva").
      * @return namespaceLength The byte length of the handle including the '@'.
      */
-    function namespace(address registry) public view returns (bytes16 namespaceHandle, bytes1 namespaceLength) {
+    function namespace(address registry)
+        public
+        view
+        returns (bytes16 namespaceHandle, bytes1 namespaceLength)
+    {
         Namespace storage ns = _registryNamespace[registry];
         namespaceHandle = ns._namespace;
         namespaceLength = ns._length;

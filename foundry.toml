@@ -16,3 +16,14 @@ fail_on_revert = false
 
 optimizer = true
 optimizer_runs = 100000
+
+[fmt]
+line_length = 100              
+tab_width = 4                 
+bracket_spacing = true         
+
+multiline_func_header = "attributes_first" 
+
+# 4. Clean-up Logic
+sort_imports = true            # Alphabetizes imports automatically
+wrap_comments = true           # Wraps long NatSpec to your line_length

@@ -87,7 +87,10 @@ interface ISalvaSingleton {
      * @return namespaceHandle  The bytes16 namespace handle assigned to this registry.
      * @return namespaceLength  Byte length of the namespace string.
      */
-    function namespace(address registry) external view returns (bytes16 namespaceHandle, bytes1 namespaceLength);
+    function namespace(address registry)
+        external
+        view
+        returns (bytes16 namespaceHandle, bytes1 namespaceLength);
 
     // ─────────────────────────────────────────────────────────────────────────
     // UPGRADE

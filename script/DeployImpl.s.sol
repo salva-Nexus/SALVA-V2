@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Script} from "forge-std/Script.sol";
-import {Singleton} from "@Singleton/Singleton.sol";
-import {MultiSig} from "@MultiSig/MultiSig.sol";
-import {BaseRegistry} from "@BaseRegistry/BaseRegistry.sol";
-import {console} from "forge-std/Test.sol";
+import { BaseRegistry } from "@BaseRegistry/BaseRegistry.sol";
+import { MultiSig } from "@MultiSig/MultiSig.sol";
+import { Singleton } from "@Singleton/Singleton.sol";
+import { Script } from "forge-std/Script.sol";
+import { console } from "forge-std/Test.sol";
 //import {RegistryFactory} from "@RegistryFactory/RegistryFactory.sol";
 
 contract DeployImpl is Script {

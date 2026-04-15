@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {Initialize} from "@Initialize/Initialize.sol";
-import {LinkName} from "@LinkName/LinkName.sol";
-import {UnlinkName} from "@UnlinkName/UnlinkName.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { Initialize } from "@Initialize/Initialize.sol";
+import { LinkName } from "@LinkName/LinkName.sol";
+import { UnlinkName } from "@UnlinkName/UnlinkName.sol";
+import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title Singleton
@@ -29,13 +29,15 @@ contract Singleton is Initializable, UUPSUpgradeable, Initialize, LinkName, Unli
 
     /**
      * @notice Sets the administrative MultiSig address during deployment.
-     * * ─────────────────────────────────────────────────────────────────────────
+     * *
+     * ─────────────────────────────────────────────────────────────────────────
      * DEPLOYMENT STATE (Constructor)
      * ─────────────────────────────────────────────────────────────────────────
      * 1. Assigns the immutable _MULTISIG address.
      * 2. This address is the ONLY account capable of calling initializeRegistry.
      * 3. Cannot be updated.
-     * * ─────────────────────────────────────────────────────────────────────────
+     * *
+     * ─────────────────────────────────────────────────────────────────────────
      */
     constructor() {
         _disableInitializers();
@@ -71,5 +73,9 @@ contract Singleton is Initializable, UUPSUpgradeable, Initialize, LinkName, Unli
     // 4. Resolve:    (via Link/Unlink) Provides view functions for resolution.
     // ─────────────────────────────────────────────────────────────────────────
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyMultiSig(_MULTISIG) {}
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        override
+        onlyMultiSig(_MULTISIG)
+    { }
 }

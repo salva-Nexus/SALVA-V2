@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {Resolve} from "@Resolve/Resolve.sol";
+import { Resolve } from "@Resolve/Resolve.sol";
 
 /**
  * @title LinkName
@@ -24,25 +24,30 @@ abstract contract LinkName is Resolve {
      *      the user. The name is normalized and welded with the namespace to
      *      produce a collision-resistant storage key.
      *
-     * ── STEP 1 · NAMESPACE RETRIEVAL ────────────────────────────────────────
+     * ── STEP 1 · NAMESPACE RETRIEVAL
+     * ────────────────────────────────────────
      *  1. Resolve `sender()` against the registry mapping in singleton storage.
      *  2. Extract the `bytes16` namespace handle and its length.
      *  3. If the handle is `0x00` the caller is not a registered registry → REVERT.
      *
-     * ── STEP 2 · NAME EXTRACTION (Calldata) ─────────────────────────────────
+     * ── STEP 2 · NAME EXTRACTION (Calldata)
+     * ─────────────────────────────────
      *  `name` (bytes calldata) layout:
      *    [ 0x00 – 0x1F ] length word  (e.g. 7 for "charles")
      *    [ 0x20 – 0x3F ] raw UTF-8 bytes → loaded into `nameToBytes`
      *
-     * ── STEP 3 · STORAGE-KEY WELDING ────────────────────────────────────────
+     * ── STEP 3 · STORAGE-KEY WELDING
+     * ────────────────────────────────────────
      *  `fullLength` = normalizedNameLength + namespaceLength
      *  a. `_normalizeAndValidate` — enforces character rules and applies the
      *     anti-phishing alphabetical flip for underscore-split names.
      *  b. `_computeNameHash`:
      *       [ Normalized Name ][ Namespace Handle ]
-     *       ├──── name ───────┤├──── handle ──────┤ → keccak256 → nameHash
+     *       ├──── name ───────┤├──── handle
+     * ──────┤ → keccak256 → nameHash
      *
-     * ── STEP 4 · STORAGE WRITE ──────────────────────────────────────────────
+     * ── STEP 4 · STORAGE WRITE
+     * ──────────────────────────────────────────────
      *  `_performLinkToWallet(nameHash, wallet, _sender)`
      *    → sstore(nameHash, wallet)          — forward resolution
      *    → sstore(senderHash, nameHash)      — ownership index for unlink

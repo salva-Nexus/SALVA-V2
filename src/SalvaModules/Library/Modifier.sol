@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {Errors} from "@Errors/Errors.sol";
-import {Context} from "@Context/Context.sol";
+import { Context } from "@Context/Context.sol";
+import { Errors } from "@Errors/Errors.sol";
 
 /**
  * @title Modifier

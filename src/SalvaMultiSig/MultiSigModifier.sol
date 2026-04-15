@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {MultiSigStorage} from "@MultiSigStorage/MultiSigStorage.sol";
-import {Errors} from "@Errors/Errors.sol";
-import {Context} from "@Context/Context.sol";
+import { Context } from "@Context/Context.sol";
+import { Errors } from "@Errors/Errors.sol";
+import { MultiSigStorage } from "@MultiSigStorage/MultiSigStorage.sol";
 
 abstract contract MultiSigModifier is Errors, MultiSigStorage, Context {
     // Restricts function access to active validators only.

@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {BaseTest} from "@BaseTest/BaseTest.t.sol";
-import {DeploySingleton} from "../../script/DeploySingleton.s.sol";
-import {Singleton} from "@Singleton/Singleton.sol";
+import { DeploySingleton } from "../../script/DeploySingleton.s.sol";
+import { BaseTest } from "@BaseTest/BaseTest.t.sol";
+import { Singleton } from "@Singleton/Singleton.sol";
 // import {BaseRegistry} from "@BaseRegistry/BaseRegistry.sol";
-import {Test, console} from "forge-std/Test.sol";
-import {TestMultiSig} from "@TestMultiSig/TestMultiSig.t.sol";
-import {Errors} from "@Errors/Errors.sol";
-import {MockUSDC} from "@MockUSDC/MockUSDC.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { Errors } from "@Errors/Errors.sol";
+import { MockUSDC } from "@MockUSDC/MockUSDC.sol";
+import { TestMultiSig } from "@TestMultiSig/TestMultiSig.t.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { Test, console } from "forge-std/Test.sol";
 
 contract TestSingleton is Test, BaseTest, TestMultiSig {
     using SafeERC20 for IERC20;
@@ -205,8 +205,8 @@ contract TestSingleton is Test, BaseTest, TestMultiSig {
 
         _changePrank(replayer);
         // replayer manages to get the previous signature
-        // even though it doesn't make sense for a replayer to use the same addres of the original owner
-        // we still have to test, to prove:
+        // even though it doesn't make sense for a replayer to use the same addres of the original
+        // owner we still have to test, to prove:
         // 1. One gateway through
         // 2. phishing resistance even if gateway is bypassed
         bytes4 selector = Errors.Errors__Taken.selector;

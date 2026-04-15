@@ -1,20 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {Context} from "@Context/Context.sol";
-import {Errors} from "@Errors/Errors.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import {ISalvaSingleton} from "@ISalvaSingleton/ISalvaSingleton.sol";
-import {RegistryFactory} from "@RegistryFactory/RegistryFactory.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { Context } from "@Context/Context.sol";
+import { Errors } from "@Errors/Errors.sol";
+import { ISalvaSingleton } from "@ISalvaSingleton/ISalvaSingleton.sol";
+import { RegistryFactory } from "@RegistryFactory/RegistryFactory.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /**
  * @title BaseRegistry
  * @author cboi@Salva
  * @notice Primary user interface for a specific Salva namespace.
- * @dev Deployed as an EIP-1167 minimal proxy. Manages signature verification, tiered fee collection,
+ * @dev Deployed as an EIP-1167 minimal proxy. Manages signature verification, tiered fee
+ * collection,
  * and delegates name-to-address mapping changes to the protocol Singleton.
  */
 contract BaseRegistry is Context, Errors {
@@ -76,7 +77,10 @@ contract BaseRegistry is Context, Errors {
      * @param _factory Address of the RegistryFactory.
      * @param _namespace The namespace identifier string.
      */
-    function initialize(address _singleton, address _factory, string memory _namespace) external isInitialized {
+    function initialize(address _singleton, address _factory, string memory _namespace)
+        external
+        isInitialized
+    {
         singleton = _singleton;
         factory = _factory;
         nspace = _namespace;
@@ -96,14 +100,17 @@ contract BaseRegistry is Context, Errors {
      * @param signature The backend ECDSA signature authorizing the link.
      * @return _isLinked Boolean success status of the link operation.
      */
-    function link(bytes calldata _name, address _wallet, address _feeToken, bytes calldata signature)
-        external
-        returns (bool _isLinked)
-    {
+    function link(
+        bytes calldata _name,
+        address _wallet,
+        address _feeToken,
+        bytes calldata signature
+    ) external returns (bool _isLinked) {
         address _sender = sender();
         bytes32 messageHash;
 
-        // Assembly used for gas-efficient packing and hashing: keccak256(abi.encodePacked(_name, _wallet))
+        // Assembly used for gas-efficient packing and hashing: keccak256(abi.encodePacked(_name,
+        // _wallet))
         assembly ("memory-safe") {
             calldatacopy(0x00, _name.offset, _name.length)
             mstore(_name.length, shl(sub(0x100, mul(0x14, 0x08)), _wallet))

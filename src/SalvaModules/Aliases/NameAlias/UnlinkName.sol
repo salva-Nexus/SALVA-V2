@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {Resolve} from "@Resolve/Resolve.sol";
+import { Resolve } from "@Resolve/Resolve.sol";
 
 /**
  * @title UnlinkName

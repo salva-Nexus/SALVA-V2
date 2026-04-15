@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {MultiSigModifier} from "@MultiSigModifier/MultiSigModifier.sol";
+import { MultiSigModifier } from "@MultiSigModifier/MultiSigModifier.sol";
 
 /**
  * @title MultiSigHelper
  * @author cboi@Salva
  * @notice Internal view logic for tracking MultiSig validation progress and state.
- * @dev Provides read-only access to validator update status, recovery permissions, and type conversions.
+ * @dev Provides read-only access to validator update status, recovery permissions, and type
+ * conversions.
  */
 abstract contract MultiSigHelper is MultiSigModifier {
     // ─────────────────────────────────────────────────────────────────────────
@@ -15,8 +16,10 @@ abstract contract MultiSigHelper is MultiSigModifier {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Retrieves the number of remaining signatures required for a validator update to reach quorum.
-     * @dev Reads the 'remaining' field from the ValidatorUpdateRequest struct associated with the address.
+     * @notice Retrieves the number of remaining signatures required for a validator update to reach
+     * quorum.
+     * @dev Reads the 'remaining' field from the ValidatorUpdateRequest struct associated with the
+     * address.
      * @param _addr The address of the validator subject to the update.
      * @return The count of additional unique signatures needed.
      */

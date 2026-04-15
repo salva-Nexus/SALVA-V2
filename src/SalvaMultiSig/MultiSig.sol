@@ -1,18 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {MultiSigHelper} from "@MultiSigHelper/MultiSigHelper.sol";
-import {Events} from "@Events/Events.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import {ISalvaSingleton} from "@ISalvaSingleton/ISalvaSingleton.sol";
-import {RegistryFactory} from "@RegistryFactory/RegistryFactory.sol";
+import { Events } from "@Events/Events.sol";
+import { ISalvaSingleton } from "@ISalvaSingleton/ISalvaSingleton.sol";
+import { MultiSigHelper } from "@MultiSigHelper/MultiSigHelper.sol";
+import { RegistryFactory } from "@RegistryFactory/RegistryFactory.sol";
+import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /**
  * @title Salva Administrative MultiSig
  * @author cboi@Salva
- * @notice Central governance contract for managing protocol validators, singleton upgrades, and registry deployments.
- * @dev Implements a majority-based voting system with a timelock mechanism for validator updates and atomic execution for registry management.
+ * @notice Central governance contract for managing protocol validators, singleton upgrades, and
+ * registry deployments.
+ * @dev Implements a majority-based voting system with a timelock mechanism for validator updates
+ * and atomic execution for registry management.
  */
 contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
     // ─────────────────────────────────────────────────────────────────────────
@@ -43,7 +45,9 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
      * @param factory The address of the RegistryFactory contract.
      */
     function setSingletonAndFactory(address singleton, address factory) external onlyValidators {
-        if (_salvaSingleton != address(0) && _registryFactory != address(0)) revert Errors__Already_Set();
+        if (_salvaSingleton != address(0) && _registryFactory != address(0)) {
+            revert Errors__Already_Set();
+        }
         _salvaSingleton = singleton;
         _registryFactory = factory;
     }
@@ -84,7 +88,11 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
      * @param _addr The address subject to the validator update proposal.
      * @return The target address, action type, and remaining votes needed.
      */
-    function validateValidator(address _addr) external onlyValidators returns (address, bool, uint32) {
+    function validateValidator(address _addr)
+        external
+        onlyValidators
+        returns (address, bool, uint32)
+    {
         ValidatorUpdateRequest storage update = _updateValidator[_addr];
         address _sender = sender();
         if (!update.isProposed) revert Errors__Validator_Update_Not_Proposed();
@@ -147,7 +155,8 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
         enforceBytes16(namespace)
         returns (address _clone)
     {
-        _clone = RegistryFactory(_registryFactory).deployRegistry(address(_salvaSingleton), namespace);
+        _clone = RegistryFactory(_registryFactory)
+            .deployRegistry(address(_salvaSingleton), namespace);
         ISalvaSingleton(_salvaSingleton)
             .initializeRegistry(_clone, _toBytes16(namespace), _toBytes1(bytes(namespace).length));
 
@@ -222,5 +231,5 @@ contract MultiSig is Initializable, UUPSUpgradeable, Events, MultiSigHelper {
     /**
      * @dev Function that reverts if called by any non-validator account during a UUPS upgrade.
      */
-    function _authorizeUpgrade(address newImplementation) internal override onlyValidators {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyValidators { }
 }

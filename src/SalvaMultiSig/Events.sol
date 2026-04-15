@@ -3,7 +3,8 @@ pragma solidity ^0.8.30;
 
 /**
  * @title Salva Governance Events
- * @notice Interface containing all events emitted by the Salva Registry and Validator governance modules.
+ * @notice Interface containing all events emitted by the Salva Registry and Validator governance
+ * modules.
  * @dev Use these events to track the lifecycle of naming registries and validator set updates.
  */
 abstract contract Events {

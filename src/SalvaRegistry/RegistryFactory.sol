@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
-import {BaseRegistry} from "@BaseRegistry/BaseRegistry.sol";
-import {Modifier} from "@Modifier/Modifier.sol";
+import { BaseRegistry } from "@BaseRegistry/BaseRegistry.sol";
+import { Modifier } from "@Modifier/Modifier.sol";
+import { Clones } from "@openzeppelin/contracts/proxy/Clones.sol";
 
 /**
  * @title RegistryFactory
  * @author cboi@Salva
  * @notice Factory for deploying and managing Salva BaseRegistry EIP-1167 minimal proxies.
- * @dev Serves as the global configuration layer. Proxies fetch the `signer` and `NGNs` address from this
+ * @dev Serves as the global configuration layer. Proxies fetch the `signer` and `NGNs` address from
+ * this
  * contract dynamically, enabling instant protocol-wide updates via a single state change.
  */
 contract RegistryFactory is Modifier {

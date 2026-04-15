@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {Modifier} from "@Modifier/Modifier.sol";
-import {Storage} from "@Storage/Storage.sol";
+import { Modifier } from "@Modifier/Modifier.sol";
+import { Storage } from "@Storage/Storage.sol";
 
 /**
  * @title NameLib
@@ -43,11 +43,12 @@ abstract contract NameLib is Modifier, Storage {
      * @param storageCheck  Pass 0 to run a collision guard; any other value skips it.
      * @return nameHash     The welded keccak256 storage key.
      */
-    function _computeNameHash(bytes16 namespace_, uint256 nameLength, uint256 fullLength, uint256 storageCheck)
-        internal
-        view
-        returns (bytes32 nameHash)
-    {
+    function _computeNameHash(
+        bytes16 namespace_,
+        uint256 nameLength,
+        uint256 fullLength,
+        uint256 storageCheck
+    ) internal view returns (bytes32 nameHash) {
         assembly ("memory-safe") {
             // STEP: APPEND NAMESPACE
             // mstore at the offset of nameLength creates a contiguous byte array:
@@ -124,7 +125,10 @@ abstract contract NameLib is Modifier, Storage {
             // STEP 1 — CHARACTER VALIDATION (a-z, 2-9, _)
             // ─────────────────────────────────────────────────────────────────
             if (mark == 0) {
-                if (!(char >= 0x61 && char <= 0x7a) && !(char >= 0x32 && char <= 0x39) && char != 0x5f) {
+                if (
+                    !(char >= 0x61 && char <= 0x7a) && !(char >= 0x32 && char <= 0x39)
+                        && char != 0x5f
+                ) {
                     revert Errors__Invalid_Character();
                 }
             }
@@ -138,8 +142,8 @@ abstract contract NameLib is Modifier, Storage {
                         // Caller address already occupies 0x00,
                         // so we leave the first char at mstore to clean it
                         // when the rest of the chars use mstore8..
-                        // This is to prevent redundant mstore on 32bytes mem slot when there's nothing there..
-                        // first char mstore makes the memory clean.
+                        // This is to prevent redundant mstore on 32bytes mem slot when there's
+                        // nothing there.. first char mstore makes the memory clean.
                         switch eq(cursor, 0x00)
                         case 0x01 {
                             mstore(add(0x00, cursor), char)
@@ -261,7 +265,11 @@ abstract contract NameLib is Modifier, Storage {
      * @param nameHash  The welded storage key of the alias to unlink.
      * @return _senderHash  The ownership-index slot key.
      */
-    function _checkCaller(address _sender, bytes32 nameHash) internal view returns (bytes32 _senderHash) {
+    function _checkCaller(address _sender, bytes32 nameHash)
+        internal
+        view
+        returns (bytes32 _senderHash)
+    {
         assembly ("memory-safe") {
             mstore(0x00, nameHash)
             mstore(0x20, _sender)
@@ -299,7 +307,10 @@ abstract contract NameLib is Modifier, Storage {
      * @param senderHash  The ownership-index slot key returned by _checkCaller.
      * @return _isUnLinked true on success.
      */
-    function _performUnlink(bytes32 nameHash, bytes32 senderHash) internal returns (bool _isUnLinked) {
+    function _performUnlink(bytes32 nameHash, bytes32 senderHash)
+        internal
+        returns (bool _isUnLinked)
+    {
         assembly {
             sstore(nameHash, 0x00)
             sstore(senderHash, 0x00)

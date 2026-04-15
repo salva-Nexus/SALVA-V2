@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {MultiSig} from "@MultiSig/MultiSig.sol";
-import {Singleton} from "@Singleton/Singleton.sol";
-import {BaseRegistry} from "@BaseRegistry/BaseRegistry.sol";
-import {Test, console} from "forge-std/Test.sol";
+import { BaseRegistry } from "@BaseRegistry/BaseRegistry.sol";
+import { MultiSig } from "@MultiSig/MultiSig.sol";
+import { Singleton } from "@Singleton/Singleton.sol";
+import { Test, console } from "forge-std/Test.sol";
 // import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 abstract contract BaseTest is Test {
     using MessageHashUtils for bytes32;
@@ -47,7 +47,11 @@ abstract contract BaseTest is Test {
         vm.stopPrank();
     }
 
-    function _sign(address _signer, bytes32 _digest) internal pure returns (uint8 v, bytes32 r, bytes32 s) {
+    function _sign(address _signer, bytes32 _digest)
+        internal
+        pure
+        returns (uint8 v, bytes32 r, bytes32 s)
+    {
         return vm.sign(_signer, _digest);
     }
 
@@ -76,7 +80,9 @@ abstract contract BaseTest is Test {
         address _registry,
         bytes4 _revertSelector
     ) internal {
-        bytes memory data = abi.encodeWithSelector(registry.link.selector, _name, _wallet, usdc, _signature);
+        bytes memory data = abi.encodeWithSelector(
+            registry.link.selector, _name, _wallet, usdc, _signature
+        );
         if (_revertSelector > 0) {
             vm.expectRevert(_revertSelector);
         }
@@ -84,7 +90,13 @@ abstract contract BaseTest is Test {
         console.log(success);
     }
 
-    function _start(bytes memory _name, address _wallet, address _signer, address _prank, bytes4 _selector) internal {
+    function _start(
+        bytes memory _name,
+        address _wallet,
+        address _signer,
+        address _prank,
+        bytes4 _selector
+    ) internal {
         bytes memory sig = _computeSignature(_name, _wallet, _signer);
         _changePrank(_prank);
         _approve();

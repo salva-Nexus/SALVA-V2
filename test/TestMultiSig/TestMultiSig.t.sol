@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {BaseTest} from "@BaseTest/BaseTest.t.sol";
-import {Errors} from "@Errors/Errors.sol";
-import {console} from "forge-std/Test.sol";
-import {BaseRegistry} from "@BaseRegistry/BaseRegistry.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { BaseRegistry } from "@BaseRegistry/BaseRegistry.sol";
+import { BaseTest } from "@BaseTest/BaseTest.t.sol";
+import { Errors } from "@Errors/Errors.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { console } from "forge-std/Test.sol";
 
 abstract contract TestMultiSig is BaseTest {
     using SafeERC20 for IERC20;
@@ -74,7 +74,9 @@ abstract contract TestMultiSig is BaseTest {
         multisig.executeUpdateValidator(makeAddr("val"));
     }
 
-    function test_Only_Validator_Can_Update_Recovery_Singleton_And_Signer(address _random) external {
+    function test_Only_Validator_Can_Update_Recovery_Singleton_And_Signer(address _random)
+        external
+    {
         vm.assume(_random != owner);
         _changePrank(_random);
         vm.expectRevert(abi.encodeWithSelector(Errors.Errors__Not_Authorized.selector));
@@ -124,11 +126,19 @@ abstract contract TestMultiSig is BaseTest {
         IERC20(usdc).approve(metamaskReg, 1e6);
         _link(bytes("okoronkwo_joe"), user2, signature2, metamaskReg, 0);
 
-        assertEq(BaseRegistry(coinbaseReg).resolveAddress(bytes("okoronkwo_charles@coinbase")), user1);
-        assertEq(BaseRegistry(coinbaseReg).resolveAddress(bytes("charles_okoronkwo@coinbase")), user1);
-        assertNotEq(BaseRegistry(coinbaseReg).resolveAddress(bytes("okoronkwo_charles@metamask")), user1);
+        assertEq(
+            BaseRegistry(coinbaseReg).resolveAddress(bytes("okoronkwo_charles@coinbase")), user1
+        );
+        assertEq(
+            BaseRegistry(coinbaseReg).resolveAddress(bytes("charles_okoronkwo@coinbase")), user1
+        );
+        assertNotEq(
+            BaseRegistry(coinbaseReg).resolveAddress(bytes("okoronkwo_charles@metamask")), user1
+        );
         assertEq(BaseRegistry(metamaskReg).resolveAddress(bytes("okoronkwo_joe@metamask")), user2);
         assertEq(BaseRegistry(metamaskReg).resolveAddress(bytes("joe_okoronkwo@metamask")), user2);
-        assertNotEq(BaseRegistry(coinbaseReg).resolveAddress(bytes("okoronkwo_joe@coinbase")), user2);
+        assertNotEq(
+            BaseRegistry(coinbaseReg).resolveAddress(bytes("okoronkwo_joe@coinbase")), user2
+        );
     }
 }
