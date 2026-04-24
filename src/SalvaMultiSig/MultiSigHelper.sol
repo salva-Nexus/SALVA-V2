@@ -45,6 +45,54 @@ abstract contract MultiSigHelper is MultiSigModifier {
         remaining = _validatorUpdateProposal[target].remaining;
     }
 
+    /**
+     * @notice Returns the number of validator votes still required to reach quorum
+     *         on an upgrade proposal.
+     * @param newImpl  The proposed new implementation address identifying the proposal.
+     * @return remaining  Votes still needed.
+     */
+    function upgradeVotesRemaining(address newImpl) external view returns (uint256 remaining) {
+        remaining = _upgradeProposal[newImpl].remaining;
+    }
+
+    /**
+     * @notice Returns the number of validator votes still required to reach quorum
+     *         on a signer update proposal.
+     * @param newSigner  The proposed new signer address identifying the proposal.
+     * @return remaining  Votes still needed.
+     */
+    function signerUpdateVotesRemaining(address newSigner)
+        external
+        view
+        returns (uint256 remaining)
+    {
+        remaining = _signerUpdateProposal[newSigner].remaining;
+    }
+
+    /**
+     * @notice Returns the number of validator votes still required to reach quorum
+     *         on a BaseRegistry implementation update proposal.
+     * @param newImpl  The proposed new implementation address identifying the proposal.
+     * @return remaining  Votes still needed.
+     */
+    function baseRegistryImplUpdateVotesRemaining(address newImpl)
+        external
+        view
+        returns (uint256 remaining)
+    {
+        remaining = _baseRegistryImplUpdateProposal[newImpl].remaining;
+    }
+
+    /**
+     * @notice Returns the number of validator votes still required to reach quorum
+     *         on an unpause proposal.
+     * @param proxy  The target contract address identifying the proposal.
+     * @return remaining  Votes still needed.
+     */
+    function unpauseVotesRemaining(address proxy) external view returns (uint256 remaining) {
+        remaining = uint256(_unpauseProposal[proxy].remaining);
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // STATUS QUERIES
     // ─────────────────────────────────────────────────────────────────────────
