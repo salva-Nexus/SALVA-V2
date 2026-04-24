@@ -21,11 +21,25 @@ contract DeployImpl is Script {
         // Singleton singProxyMainnet = Singleton();
         // Singleton singProxyTestnet = Singleton(0x383418ec4170ed4f93FE18C11BF8437E667Bcb61);
         // MultiSig multsigproxyMainnet = MultiSig();
-        // MultiSig multsigproxyTestnet = MultiSig(0x9D22b9B449D59bA32435d2155fF184b922205DB1);
+        MultiSig multsigProxyTestnet = MultiSig(0x9D22b9B449D59bA32435d2155fF184b922205DB1);
         // RegistryFactory factoryProxyMainnet = RegistryFactory();
         // RegistryFactory factoryProxyTestnet =
         // RegistryFactory(0xE777e4038697C0Db37273DA0D50f3022c14e153E);
         // MultiSig mulsig = new MultiSig();
-        // Singleton singleton = new Singleton();
+        // Singleton singleton = new Singleton()
+        // 0xb298626ec29fcecd98d54ba542c6d391d3123cb7
+        multsigProxyTestnet.proposeUpgrade(address(multsigProxyTestnet), address(mulsig), true);
+        multsigProxyTestnet.validateUpgrade(address(mulsig));
+        multsigProxyTestnet.executeUpgrade(address(mulsig));
+
+        // multsigProxyTestnet.proposeValidatorUpdate(
+        //     address(0xF7cB5cd65D10A435A13DC264BaDcc4bd01ef0C43), false
+        // );
+        // multsigProxyTestnet.validateValidatorUpdate(
+        //     address(0xF7cB5cd65D10A435A13DC264BaDcc4bd01ef0C43)
+        // );
+        // multsigProxyTestnet.executeValidatorUpdate(
+        //     address(0xF7cB5cd65D10A435A13DC264BaDcc4bd01ef0C43)
+        // );
     }
 }

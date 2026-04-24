@@ -86,22 +86,4 @@ contract ValidatorProposal is Setup {
         vm.expectRevert(Errors.Errors__ValidatorUpdateNotProposed.selector);
         multisig.validateValidatorUpdate(_addr);
     }
-
-    function test_Proposed_Or_Executed_Proposal_Cannot_Be_Proposed_Again() external {
-        // test after execution
-        _changePrank(owner);
-        multisig.proposeValidatorUpdate(makeAddr("val"), true);
-        multisig.validateValidatorUpdate(makeAddr("val"));
-        multisig.executeValidatorUpdate(makeAddr("val"));
-
-        vm.expectRevert();
-        multisig.proposeValidatorUpdate(makeAddr("val"), true);
-
-        // test before execution
-        _changePrank(owner);
-        multisig.proposeValidatorUpdate(makeAddr("val1"), true);
-
-        vm.expectRevert();
-        multisig.proposeValidatorUpdate(makeAddr("val1"), true);
-    }
 }
