@@ -33,8 +33,7 @@ contract DeployV2 is Script {
         Singleton singleton = new Singleton();
         bytes memory sInit =
             abi.encodeWithSelector(singleton.initialize.selector, address(wrappedMultiSig));
-        Singleton wrappedSingleton =
-            Singleton(payable(address(new ERC1967Proxy(address(singleton), sInit))));
+        Singleton wrappedSingleton = Singleton(address(new ERC1967Proxy(address(singleton), sInit)));
 
         //============ REGISTRY AND FACTORY ============
         RegistryFactory factory = new RegistryFactory();

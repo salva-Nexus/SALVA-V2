@@ -16,14 +16,19 @@ contract DeployImpl is Script {
     }
 
     function run() external broadcastLive {
-        // NGN -> 0x78E9917e6A7D7DD2fd3fc031723741F4f755641C
-        // Singleton singProxy = Singleton(0x95ef0B638899ad4ADCb86D9491D8A3fFf97161C2);
-        // MultiSig multsigproxy = MultiSig(0x554531E22ec6F851c2BF3C54e7C96EEcd180D274);
-        // RegistryFactory factory = RegistryFactory(0x5713E35498Ec25e5b50ACcb74D55C0AA2b24Ae79)
-        // MultiSig mulsig = new MultiSig();
+        // NGN Mainnet -> 0x78E9917e6A7D7DD2fd3fc031723741F4f755641C
+        // NGN Testnet -> 0x78E9917e6A7D7DD2fd3fc031723741F4f755641C
+        // Singleton singProxyMainnet = Singleton();
+        // Singleton singProxyTestnet = Singleton(0x95ef0B638899ad4ADCb86D9491D8A3fFf97161C2);
+        // MultiSig multsigproxyMainnet = MultiSig();
+        // MultiSig multsigproxyTestnet = MultiSig(0x554531E22ec6F851c2BF3C54e7C96EEcd180D274);
+        // RegistryFactory factoryProxyMainnet = RegistryFactory();
+        // RegistryFactory factoryProxyTestnet =
+        // RegistryFactory(0x5713E35498Ec25e5b50ACcb74D55C0AA2b24Ae79); MultiSig mulsig = new
+        // MultiSig();
         //Singleton singleton = new Singleton();
 
-        // multsigproxy.upgradeToAndCall(address(mulsig), "");
-        // multsigproxy.upgradeSingleton(address(singleton), "");
+        // multsigproxyMainnet.upgradeToAndCall(address(mulsig), "");
+        // multsigproxyMainnet.upgradeSingleton(address(singleton), "");
     }
 }
