@@ -5,86 +5,108 @@ import { NameLib } from "@NameLib/NameLib.sol";
 
 /**
  * @title Resolve
- * @notice Logic for resolving human-readable aliases back to addresses or account numbers.
- * @dev Inherits NameLib for assembly-optimized string manipulation and hashing.
+ * @author cboi@Salva
+ * @notice Read-only resolution logic for the Salva Singleton.
+ * @dev Resolves human-readable namespaced aliases (e.g. `"charles[at]salva"`) back to
+ *      their linked wallet addresses using the same welded-keccak256 storage key
+ *      that `LinkName` writes.
+ *
+ *      Inherits `NameLib` for assembly-optimized string manipulation and hashing.
  */
 abstract contract Resolve is NameLib {
+    // ─────────────────────────────────────────────────────────────────────────
+    // ALIAS RESOLUTION
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
-     * @notice Resolves a namespaced alias (e.g., "charles@salva") to a wallet address.
-     * @dev Extracts namespace from calldata by splitting at the '@' boundary,
-     * then reconstructs the storage key via _normalizeAndValidate and _computeNameHash.
+     * @notice Resolves a fully qualified namespaced alias to its linked wallet address.
+     *
+     * @dev Call flow:
+     *
+     *      STEP 1 — CALLDATA EXTRACTION
+     *        `aliasName` (bytes calldata) layout:
+     *          [ 0x00 – 0x1F ] length of the bytes array
+     *          [ 0x20 – …    ] actual UTF-8 data  (e.g. `"charles[at]salva"`)
+     *
+     *      STEP 2 — NAMESPACE ISOLATION (assembly)
+     *        Goal: split `"charles[at]salva"` into local name `"charles"` and
+     *        namespace handle `"[at]salva"`.
+     *
+     *        Memory layout after `calldatacopy` to `0x80`:
+     *          [ c h a r l e s ][at][ s a l v a ]
+     *          ├─ 7 bytes ─────┤ ↑  ├─ namespace ─┤
+     *
+     *        `lengthWithoutNamespace` = 7  (returned by `_normalizeAndValidate`)
+     *        `namespaceHandle` = mload(0x80 + 7) → `[at]salva\x00...`
+     *
+     *      STEP 3 — STORAGE-KEY RECONSTRUCTION
+     *        `_normalizeAndValidate` re-applies the anti-phishing flip.
+     *        `_computeNameHash` welds the canonical name with the namespace handle.
+     *        `skipCollisionCheck = 1` — view function, no collision guard needed.
+     *
+     *      STEP 4 — DIRECT STORAGE LOAD
+     *        `sload(nameHash)` returns the stored wallet address.
+     *
+     * @param aliasName  Full namespaced alias in UTF-8 bytes (e.g. `"charles[at]salva"`).
+     * @return wallet    The wallet address bound to the alias, or `address(0)` if unmapped.
      */
-    // ─────────────────────────────────────────────────────────────────────────
-    // STEP 1 — CALLDATA EXTRACTION
-    // ─────────────────────────────────────────────────────────────────────────
-    // aliasName (bytes calldata) layout:
-    // [ 0x00 - 0x1F ]: Length of the bytes array
-    // [ 0x20 - 0x3F ]: Actual string data (e.g., "charles@salva")
-    // ─────────────────────────────────────────────────────────────────────────
-    // STEP 2 — NAMESPACE ISOLATION (Assembly)
-    // ─────────────────────────────────────────────────────────────────────────
-    // To get the namespace handle after the '@':
-    // 1. Copy raw calldata to Memory[0x80]
-    // 2. Calculate offset: 0x80 + lengthWithoutNamespace
-    // 3. Mload bytes16 from that offset to grab the handle.
-    //
-    // EXAMPLE: "charles@salva"
-    // [ c h a r l e s ] [ @ ] [ s a l v a ]
-    // ├─ 7 bytes ───┤   ↑   ├─ namespace ┤
-    //
-    // lengthWithoutNamespace = 7
-    // namespaceHandle = Mload(0x80 + 7) -> "@salva"
-    // ─────────────────────────────────────────────────────────────────────────
     function resolveAddress(bytes calldata aliasName) external view returns (address wallet) {
         uint256 fullLength;
         bytes32 nameData;
         assembly {
-            // Action: Load total length of input bytes
             fullLength := aliasName.length
-            // Action: Load first 32 bytes of string data directly from calldata offset
             nameData := calldataload(aliasName.offset)
         }
 
-        // Action: Get length of 'charles' part and normalize order (if underscore exists)
-        // mark: 1 = bypass standard char validation for resolution
-        uint256 lengthWithoutNamespace = _normalizeAndValidate(fullLength, nameData, 1);
+        uint256 nameLength;
+        if (fullLength > 32) {
+            uint256 rem = fullLength - 32;
+            nameLength = fullLength - rem;
+        }
 
-        bytes16 namespaceHandle;
+        // mark = 1 → skip strict character validation (read path)
+        uint256 lengthWithoutNamespace =
+            _normalizeAndValidate(fullLength > 32 ? nameLength : fullLength, nameData, 1);
 
+        bytes31 namespaceHandle;
         assembly {
-            // Memory Action: Copy 48 bytes of calldata to scratch space starting at 0x80
+            // Copy 48 bytes of calldata to scratch space at 0x80
             calldatacopy(0x80, aliasName.offset, 0x30)
 
-            // Action: Extract the namespace starting immediately after the local name
-            // Diagram: [ Local Name ][ @ ][ Namespace ]
-            //          ^ 0x80        ^ offset (lengthWithoutNamespace)
+            // Extract the namespace handle starting immediately after the local name.
+            // Diagram: [ Local Name ][at][ Namespace ]
+            //          ^ 0x80        ^ 0x80 + lengthWithoutNamespace
             namespaceHandle := mload(add(0x80, lengthWithoutNamespace))
         }
 
-        // Action: Generate the unique storage slot key
-        // storageCheck: 1 = View function (skip collision check)
+        // skipCollisionCheck = 1 → view function, skip collision guard
         bytes32 nameHash = _computeNameHash(namespaceHandle, lengthWithoutNamespace, fullLength, 1);
 
         assembly {
-            // Action: Direct Storage Load of the mapped wallet address
             wallet := sload(nameHash)
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // NAMESPACE QUERY
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
-     * @notice Returns the namespace and initialization status of a given registry contract.
-     * @dev Reads directly from _registryNamespace storage mapping.
-     * @param registry The address of the registry contract to query.
-     * @return namespaceHandle The bytes16 handle (e.g., "@salva").
-     * @return namespaceLength The byte length of the handle including the '@'.
+     * @notice Returns the namespace handle and its byte length for a given registry address.
+     * @dev Reads directly from `_registryNamespace` storage mapping (declared in `Storage`).
+     *
+     * @param registry         The registry contract address to query.
+     * @return namespaceHandle The bytes31 handle assigned to this registry (e.g.
+     * `[at]salva\x00...`).
+     * @return namespaceLength The byte length of the handle including the `[at]` prefix.
      */
     function namespace(address registry)
         public
         view
-        returns (bytes16 namespaceHandle, bytes1 namespaceLength)
+        returns (bytes31 namespaceHandle, bytes1 namespaceLength)
     {
         Namespace storage ns = _registryNamespace[registry];
-        namespaceHandle = ns._namespace;
-        namespaceLength = ns._length;
+        namespaceHandle = ns.handle;
+        namespaceLength = ns.length;
     }
 }

@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import { Context } from "@Context/Context.sol";
 import { Errors } from "@Errors/Errors.sol";
+import { IRegistryFactory } from "@IRegistryFactory/IRegistryFactory.sol";
 import { ISalvaSingleton } from "@ISalvaSingleton/ISalvaSingleton.sol";
-import { RegistryFactory } from "@RegistryFactory/RegistryFactory.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -14,137 +13,115 @@ import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/Mes
  * @title BaseRegistry
  * @author cboi@Salva
  * @notice Primary user interface for a specific Salva namespace.
- * @dev Deployed as an EIP-1167 minimal proxy. Manages signature verification, tiered fee
- * collection,
- * and delegates name-to-address mapping changes to the protocol Singleton.
+ *         See {IBaseRegistry} for full interface documentation.
+ *
+ * @dev Deployed as an EIP-1167 minimal proxy by `RegistryFactory`.
+ *      Manages ECDSA signature verification and tiered fee collection,
+ *      then delegates all name-to-address storage writes to the Singleton.
+ *
+ *      Configuration (signer, NGNs address, fee) is fetched dynamically from
+ *      the `RegistryFactory` on every `link` call, enabling protocol-wide
+ *      updates without re-deploying clones.
  */
-contract BaseRegistry is Context, Errors {
+contract BaseRegistry is Errors {
     using MessageHashUtils for bytes32;
     using SafeERC20 for IERC20;
 
-    /**
-     * @notice The protocol Singleton contract for global storage.
-     */
-    address internal singleton;
+    // ─────────────────────────────────────────────────────────────────────────
+    // STATE
+    // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * @notice The Factory contract providing protocol configuration (Signer and NGNs).
-     */
-    address internal factory;
+    /// @dev The Singleton contract — global storage layer for all alias writes.
+    address internal _singleton;
 
-    /**
-     * @notice The string identifier for this registry's namespace.
-     */
-    string internal nspace;
+    /// @dev The RegistryFactory — provides signer, NGNs address, and fee config.
+    address internal _factory;
 
-    /**
-     * @dev Proxy initialization guard.
-     */
-    bool internal initialized;
+    /// @dev The string namespace identifier for this registry (e.g. `"[at]salva"`).
+    string internal _namespace;
 
-    uint256 internal constant NGNsFEE = 500e6; // 500 NGNs with 6 decimals
-    uint256 internal constant USDFEE = 5e5; // 0.5 units for USDC/USDT with 6 decimals
+    /// @dev Proxy initialization guard. Set to `true` after `initialize` is called.
+    bool internal _initialized;
 
-    /**
-     * @notice Emitted when a name is successfully linked to a wallet.
-     * @param name The alias bytes.
-     * @param wallet The resolved destination address.
-     */
-    event LinkSuccess(bytes indexed name, address indexed wallet);
+    // ─────────────────────────────────────────────────────────────────────────
+    // EVENTS
+    // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * @notice Emitted when a name mapping is removed.
-     * @param name The alias bytes that were unlinked.
-     */
-    event UnlinkSuccess(bytes indexed name);
+    /// @notice Emitted when a name alias is successfully linked to a wallet address.
+    event LinkSuccess(bytes name, address indexed wallet);
+
+    /// @notice Emitted when a name alias binding is successfully removed.
+    event UnlinkSuccess(bytes name);
 
     // ─────────────────────────────────────────────────────────────────────────
     // INITIALIZATION
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @dev Modifier to ensure functions are only called during initial setup.
+     * @dev Guards `initialize` so it can only be called once on each clone.
      */
-    modifier isInitialized() {
-        _isInitialized();
+    modifier onlyUninitialized() {
+        _requireUninitialized();
         _;
     }
 
-    /**
-     * @notice Configures the proxy's initial state.
-     * @dev Replaces constructor logic for minimal proxy clones.
-     * @param _singleton Address of the Salva Singleton.
-     * @param _factory Address of the RegistryFactory.
-     * @param _namespace The namespace identifier string.
-     */
-    function initialize(address _singleton, address _factory, string memory _namespace)
+    /// @dev See {IBaseRegistry} for full documentation.
+    function initialize(address singleton, address factory, string memory namespace_)
         external
-        isInitialized
+        onlyUninitialized
     {
-        singleton = _singleton;
-        factory = _factory;
-        nspace = _namespace;
+        _singleton = singleton;
+        _factory = factory;
+        _namespace = namespace_;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     // CORE OPERATIONS
     // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * @notice Links an alias handle to a destination wallet address.
-     * @dev Verifies a backend signature and collects a fee before updating the Singleton.
-     * Fee logic: 500 units for NGNs (0.5 NGNs), 0.5 units for others (0.5 USDC/USDT).
-     * @param _name The name string converted to bytes.
-     * @param _wallet The destination address to link.
-     * @param _feeToken The ERC20 token used for fee payment.
-     * @param signature The backend ECDSA signature authorizing the link.
-     * @return _isLinked Boolean success status of the link operation.
-     */
-    function link(
-        bytes calldata _name,
-        address _wallet,
-        address _feeToken,
-        bytes calldata signature
-    ) external returns (bool _isLinked) {
-        address _sender = sender();
+    /// @dev See {IBaseRegistry} for full documentation.
+    function link(bytes calldata name, address wallet, bytes calldata signature)
+        external
+        returns (bool isLinked)
+    {
+        address caller = _msgSender();
         bytes32 messageHash;
 
-        // Assembly used for gas-efficient packing and hashing: keccak256(abi.encodePacked(_name,
-        // _wallet))
+        // Assembly: gas-efficient keccak256(abi.encodePacked(name, wallet))
+        // Avoids ABI encoding overhead for this hot path.
         assembly ("memory-safe") {
-            calldatacopy(0x00, _name.offset, _name.length)
-            mstore(_name.length, shl(sub(0x100, mul(0x14, 0x08)), _wallet))
-            messageHash := keccak256(0x00, add(_name.length, 0x14))
+            calldatacopy(0x00, name.offset, name.length)
+            mstore(name.length, shl(sub(0x100, mul(0x14, 0x08)), wallet))
+            messageHash := keccak256(0x00, add(name.length, 0x14))
         }
 
         bytes32 digest = messageHash.toEthSignedMessageHash();
-        address _signer = ECDSA.recover(digest, signature);
-        (address activeSigner, address ngns) = _getSignerAndNGNs();
+        address recovered = ECDSA.recover(digest, signature);
 
-        if (_signer != activeSigner) {
-            revert Errors__Invalid_Call_Source();
+        (address activeSigner, address ngns) = _fetchSignerAndNGNs();
+
+        if (recovered != activeSigner) {
+            revert Errors__InvalidCallSource();
         }
 
-        // Tiered fee normalization: 500 units if paying in NGNs, 0.5 units for USDC/USDT.
-        uint256 fee = _feeToken == ngns ? NGNsFEE : USDFEE;
+        uint256 fee = _fetchFee();
 
-        IERC20(_feeToken).safeTransferFrom(_sender, singleton, fee);
-        _isLinked = ISalvaSingleton(singleton).linkNameAlias(_name, _wallet, _sender);
-        if (_isLinked) {
-            emit LinkSuccess(_name, _wallet);
+        if (fee != 0) {
+            IERC20(ngns).safeTransferFrom(caller, _singleton, fee);
+        }
+
+        isLinked = ISalvaSingleton(_singleton).linkNameAlias(name, wallet, caller);
+
+        if (isLinked) {
+            emit LinkSuccess(name, wallet);
         }
     }
 
-    /**
-     * @notice Removes a name mapping from the Singleton.
-     * @dev Verification of unlinking rights is handled by the Singleton implementation.
-     * @param _name The name bytes to be unlinked.
-     * @return _isSuccess Boolean success status of the unlink operation.
-     */
-    function unlink(bytes calldata _name) external returns (bool _isSuccess) {
-        _isSuccess = ISalvaSingleton(singleton).unlink(_name, sender());
-        if (_isSuccess) {
-            emit UnlinkSuccess(_name);
+    /// @dev See {IBaseRegistry} for full documentation.
+    function unlink(bytes calldata name) external returns (bool isSuccess) {
+        isSuccess = ISalvaSingleton(_singleton).unlink(name, _msgSender());
+        if (isSuccess) {
+            emit UnlinkSuccess(name);
         }
     }
 
@@ -152,22 +129,14 @@ contract BaseRegistry is Context, Errors {
     // VIEW
     // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * @notice Resolves a specific name handle to its associated wallet address.
-     * @dev Proxies the view call to the protocol Singleton.
-     * @param _name The handle to resolve.
-     * @return _addr The destination address or address(0) if unmapped.
-     */
-    function resolveAddress(bytes calldata _name) external view returns (address _addr) {
-        _addr = ISalvaSingleton(singleton).resolveAddress(_name);
+    /// @dev See {IBaseRegistry} for full documentation.
+    function resolveAddress(bytes calldata name) external view returns (address addr) {
+        addr = ISalvaSingleton(_singleton).resolveAddress(name);
     }
 
-    /**
-     * @notice Returns the namespace identifier for this registry.
-     * @return The string name of the managed namespace.
-     */
+    /// @dev See {IBaseRegistry} for full documentation.
     function namespace() external view returns (string memory) {
-        return nspace;
+        return _namespace;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -175,19 +144,27 @@ contract BaseRegistry is Context, Errors {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @dev Fetches current protocol configuration from the RegistryFactory.
+     * @dev Fetches the active signer and NGNs token addresses from the RegistryFactory.
+     *      Reverts if the Factory is paused.
      */
-    function _getSignerAndNGNs() internal view returns (address, address) {
-        return RegistryFactory(factory).getSignerAndNGNs();
+    function _fetchSignerAndNGNs() internal view returns (address signer, address ngns) {
+        (signer, ngns) = IRegistryFactory(_factory).getSignerAndNGNs();
+    }
+
+    /**
+     * @dev Fetches the current protocol link fee from the RegistryFactory.
+     *      Reverts if the Factory is paused.
+     */
+    function _fetchFee() internal view returns (uint256 fee) {
+        fee = IRegistryFactory(_factory).getFee();
     }
 
     /**
      * @dev Internal check to prevent re-initialization of proxy state.
+     *      Sets `_initialized = true` atomically on first call.
      */
-    function _isInitialized() internal {
-        if (initialized) {
-            revert Errors__Initialized();
-        }
-        initialized = true;
+    function _requireUninitialized() internal {
+        if (_initialized) revert Errors__AlreadyInitialized();
+        _initialized = true;
     }
 }

@@ -5,12 +5,12 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /**
- * @title MockUSDC
+ * @title MockNGNs
  * @dev Minimal ERC20 for Salva testing.
  * Note: USDC uses 6 decimals, so we override the default 18.
  */
-contract MockUSDC is ERC20, Ownable {
-    constructor() ERC20("Mock USDC", "mUSDC") Ownable(msg.sender) {
+contract MockNGNs is ERC20, Ownable {
+    constructor() ERC20("Mock NGNs", "mNGNs") Ownable(msg.sender) {
         // Mint 1 million tokens to the deployer initially
         _mint(msg.sender, 1_000_000 * 10 ** decimals());
     }

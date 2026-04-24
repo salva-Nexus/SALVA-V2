@@ -6,61 +6,65 @@ import { MultiSigModifier } from "@MultiSigModifier/MultiSigModifier.sol";
 /**
  * @title MultiSigHelper
  * @author cboi@Salva
- * @notice Internal view logic for tracking MultiSig validation progress and state.
- * @dev Provides read-only access to validator update status, recovery permissions, and type
- * conversions.
+ * @notice Internal view logic and encoding utilities for the Salva MultiSig.
+ * @dev Provides read-only access to proposal state and recovery/validator status,
+ *      plus ABI encoding helpers used by the execution modules.
+ *
+ *      Inherits `MultiSigModifier` (→ `MultiSigErrors` → `Events` → `MultiSigStorage`).
  */
 abstract contract MultiSigHelper is MultiSigModifier {
     // ─────────────────────────────────────────────────────────────────────────
-    // VALIDATOR UPDATE TRACKING
+    // PROPOSAL STATE QUERIES
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Retrieves the number of remaining signatures required for a validator update to reach
-     * quorum.
-     * @dev Reads the 'remaining' field from the ValidatorUpdateRequest struct associated with the
-     * address.
-     * @param _addr The address of the validator subject to the update.
-     * @return The count of additional unique signatures needed.
+     * @notice Returns the number of validator votes still required to reach quorum
+     *         on a registry initialization proposal.
+     * @param registry  The clone address of the registry under proposal.
+     * @return remaining  Votes still needed.
      */
-    function _validatorValidationCountRemains(address _addr) external view returns (uint256) {
-        ValidatorUpdateRequest storage update = _updateValidator[_addr];
-        return uint256(update.remaining);
+    function registryInitVotesRemaining(address registry)
+        external
+        view
+        returns (uint256 remaining)
+    {
+        remaining = _initRegistryProposal[registry].remaining;
     }
 
     /**
-     * @notice Checks if the message sender has already cast a vote for a specific validator update.
-     * @dev Queries the hasValidated mapping within the ValidatorUpdateRequest struct.
-     * @param _addr The address of the validator subject to the update.
-     * @return True if the sender has already validated the update, false otherwise.
+     * @notice Returns the number of validator votes still required to reach quorum
+     *         on a validator set update proposal.
+     * @param target    The address of the validator under proposal.
+     * @return remaining  Votes still needed.
      */
-    function _hasValidatedValidatorUpdate(address _addr) external view returns (bool) {
-        ValidatorUpdateRequest storage update = _updateValidator[_addr];
-        return update.hasValidated[sender()];
+    function validatorUpdateVotesRemaining(address target)
+        external
+        view
+        returns (uint256 remaining)
+    {
+        remaining = _validatorUpdateProposal[target].remaining;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // RECOVERY STATUS
+    // STATUS QUERIES
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Verifies if a specific address has recovery privileges.
-     * @dev Returns the boolean value stored in the _recovery mapping for the given address.
-     * @param recovery The address to check for recovery permissions.
-     * @return True if the address is a recognized recovery entity.
+     * @notice Returns whether a given address holds recovery privileges.
+     * @param account  The address to check.
+     * @return `true` if the address is a recognized recovery entity.
      */
-    function isRecovery(address recovery) external view returns (bool) {
-        return _recovery[recovery];
+    function isRecovery(address account) external view returns (bool) {
+        return _recovery[account];
     }
 
     /**
-     * @notice Verifies if a specific address is currently an active validator.
-     * @dev Returns the boolean value stored in the _isValidator mapping.
-     * @param validator The address to check for validator status.
-     * @return True if the address is an active validator.
+     * @notice Returns whether a given address is currently an active validator.
+     * @param account  The address to check.
+     * @return `true` if the address is an active validator.
      */
-    function isValidator(address validator) external view returns (bool) {
-        return _isValidator[validator];
+    function isValidator(address account) external view returns (bool) {
+        return _isValidator[account];
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -68,22 +72,74 @@ abstract contract MultiSigHelper is MultiSigModifier {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @dev Converts a string namespace to a bytes16 format.
-     * @param nspace The string representation of the namespace.
-     * @return _nspace The resulting bytes16 value.
+     * @dev Converts a string namespace to its packed `bytes31` representation.
+     * @param namespace_  The string namespace (e.g. `"[at]salva"`).
+     * @return packed     The resulting `bytes31` value.
      */
-    function _toBytes16(string memory nspace) internal pure returns (bytes16 _nspace) {
+    function _toBytes31(string memory namespace_) internal pure returns (bytes31 packed) {
         // forge-lint: disable-next-line(unsafe-typecast)
-        _nspace = bytes16(bytes(nspace));
+        packed = bytes31(bytes(namespace_));
     }
 
     /**
-     * @dev Converts a uint256 number to a bytes1 format.
-     * @param num The number to be converted.
-     * @return _num The resulting bytes1 value.
+     * @dev Converts a `uint256` length value to `bytes1`.
+     * @param value  The integer to convert.
+     * @return packed  The resulting `bytes1` value.
      */
-    function _toBytes1(uint256 num) internal pure returns (bytes1 _num) {
+    function _toBytes1(uint256 value) internal pure returns (bytes1 packed) {
         // forge-lint: disable-next-line(unsafe-typecast)
-        _num = bytes1(uint8(num));
+        packed = bytes1(uint8(value));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ABI ENCODING UTILITIES
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * @dev Returns ABI-encoded calldata for `upgradeToAndCall(address,bytes)`.
+     * @param newImpl  The new implementation address.
+     * @return Encoded calldata bytes.
+     */
+    function _encodeUpgrade(address newImpl) internal pure returns (bytes memory) {
+        return abi.encodeWithSignature("upgradeToAndCall(address,bytes)", newImpl, "");
+    }
+
+    /**
+     * @dev Returns ABI-encoded calldata for `pauseProtocol()`.
+     * @return Encoded calldata bytes.
+     */
+    function _encodePause() internal pure returns (bytes memory) {
+        return abi.encodeWithSignature("pauseProtocol()");
+    }
+
+    /**
+     * @dev Returns ABI-encoded calldata for `unpauseProtocol()`.
+     * @return Encoded calldata bytes.
+     */
+    function _encodeUnpause() internal pure returns (bytes memory) {
+        return abi.encodeWithSignature("unpauseProtocol()");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CLONE DEPLOYMENT UTILITY
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * @dev Deploys a new BaseRegistry clone via `RegistryFactory.deployRegistry`.
+     * @param singleton   The Singleton address to pass to the new registry.
+     * @param factory     The RegistryFactory proxy address.
+     * @param namespace_  The namespace string for the new registry.
+     * @return clone      The address of the newly deployed registry clone.
+     */
+    function _deployClone(address singleton, address factory, string memory namespace_)
+        internal
+        returns (address clone)
+    {
+        bytes memory data = abi.encodeWithSignature(
+            "deployRegistry(address,address,string)", singleton, factory, namespace_
+        );
+        (bool success, bytes memory returnData) = factory.call(data);
+        if (!success) revert Errors__CloneDeploymentFailed();
+        clone = abi.decode(returnData, (address));
     }
 }

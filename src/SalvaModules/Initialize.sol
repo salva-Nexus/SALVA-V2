@@ -5,72 +5,68 @@ import { Resolve } from "@Resolve/Resolve.sol";
 
 /**
  * @title Initialize
- * @notice Restricted logic for onboarding new registries into the SALVA ecosystem.
+ * @author cboi@Salva
+ * @notice MultiSig-gated logic for onboarding new registries into the Salva ecosystem.
  * @dev Enforces strict namespace uniqueness and MultiSig-only access.
+ *      Inherits `Resolve` (→ `NameLib` → `Modifier` → `Errors` → `Storage` → `Context`).
  */
 abstract contract Initialize is Resolve {
+    // ─────────────────────────────────────────────────────────────────────────
+    // REGISTRY ONBOARDING
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
-     * @notice Registers a unique namespace to a specific registry contract.
-     * @dev Callable only by the MultiSig. Reverts on address(0), missing '@' prefix,
-     * duplicate registry, or namespace collision.
-     * @param _registry The registry contract address to onboard.
-     * @param _nspace The bytes16 namespace handle (e.g., "@salva"). Must start with 0x40.
-     * @param _len The byte length of the namespace handle.
-     * @return bool True on successful registration.
+     * @notice Permanently registers a namespace handle to a specific registry contract.
+     *
+     * @dev Access: MultiSig only (`onlyMultiSig(_multiSig)`).
+     *
+     *      STEP 1 — ACCESS CONTROL
+     *        `onlyMultiSig` ensures no namespace can be claimed without high-level
+     *        validator consensus.
+     *
+     *      STEP 2 — DATA INTEGRITY & PREFIX CHECK
+     *        · `registry != address(0)`
+     *        · `namespaceHandle[0] == 0x40` (`[at]`)
+     *        Diagram:
+     *          [ 0x40 ][ s ][ a ][ l ][ v ][ a ][ 0x00 … ]
+     *            ^ byte 0 MUST be the `[at]` symbol
+     *
+     *      STEP 3 — COLLISION & DOUBLE-INIT CHECK
+     *        · `_registryNamespace[registry]` must be unset (registry not yet bound).
+     *        · `_isNamespaceClaimed[namespaceHandle]` must be `false` (handle not yet taken).
+     *        Reverts with `Errors__DoubleInitialization` if either check fails.
+     *
+     *      STEP 4 — STORAGE COMMITMENT
+     *        · `_registryNamespace[registry]` = `{ namespaceHandle, namespaceLength }`
+     *        · `_isNamespaceClaimed[namespaceHandle]` = `true`
+     *        Result: the registry is now authorized to link aliases via `linkNameAlias`.
+     *
+     * @param registry          The registry contract address to onboard.
+     * @param namespaceHandle   The bytes31 namespace handle (e.g. `[at]salva\x00...`). Must start
+     * with `0x40`.
+     * @param namespaceLength   Byte length of the namespace handle.
+     * @return success          `true` on successful registration.
      */
-    // ─────────────────────────────────────────────────────────────────────────
-    // STEP 1 — ACCESS CONTROL (MultiSig)
-    // ─────────────────────────────────────────────────────────────────────────
-    // 1. Modifier onlyMultiSig checks if sender() == _MULTISIG.
-    // 2. This ensures that no namespace (e.g., "@salva") can be claimed
-    //    without high-level consensus.
-    // ─────────────────────────────────────────────────────────────────────────
-    // STEP 2 — DATA INTEGRITY & PREFIX CHECK
-    // ─────────────────────────────────────────────────────────────────────────
-    // 1. address != address(0)
-    // 2. _nspace[0] == 0x40 ('@')
-    // DIAGRAMMATIC ACTION:
-    // [ 0x40 ][ s ][ a ][ l ][ v ][ a ][ 0x00 ... ]
-    // ^ Index 0 MUST be the '@' symbol.
-    // ─────────────────────────────────────────────────────────────────────────
-    // STEP 3 — COLLISION & DOUBLE-INITIALIZATION CHECK
-    // ─────────────────────────────────────────────────────────────────────────
-    // 1. Query _registryNamespace[_registry]: Is this contract already registered?
-    // 2. Query _isInitialized[_nspace]: Is this handle (e.g., "@salva") already taken?
-    // REVERT: Errors__Double_Initialization if either check fails.
-    // ─────────────────────────────────────────────────────────────────────────
-    // STEP 4 — STORAGE COMMITMENT
-    // ─────────────────────────────────────────────────────────────────────────
-    // 1. _registryNamespace[_registry] = { _nspace, _len }
-    // 2. _isInitialized[_nspace] = true
-    // RESULT: The registry is now authorized to link aliases and numbers.
-    // ─────────────────────────────────────────────────────────────────────────
-    function initializeRegistry(address _registry, bytes16 _nspace, bytes1 _len)
+    function initializeRegistry(address registry, bytes31 namespaceHandle, bytes1 namespaceLength)
         external
-        onlyMultiSig(_MULTISIG)
-        returns (bool)
+        onlyMultiSig(_multiSig)
+        returns (bool success)
     {
-        // Action: Validate registry existence and proper '@' prefixing
-        if (_registry == address(0) || _nspace[0] != 0x40) {
-            revert Errors__Invalid_Address_Or_Identifier_Too_Long_Or_Invalid_Prefix();
+        if (registry == address(0) || namespaceHandle[0] != 0x40) {
+            revert Errors__InvalidAddressOrNamespaceFormat();
         }
 
-        // Action: Check for existing mapping or namespace collision
-        (bytes16 nspace,) = namespace(_registry);
-        bool isInitialized = _isInitialized[_nspace];
+        (bytes31 existingHandle,) = namespace(registry);
+        bool alreadyClaimed = _isNamespaceClaimed[namespaceHandle];
 
-        if (nspace != bytes16(0) || isInitialized) {
-            revert Errors__Double_Initialization();
+        if (existingHandle != bytes31(0) || alreadyClaimed) {
+            revert Errors__DoubleInitialization();
         }
 
-        // Action: Finalize registration in storage
-        // Mapping: [ Registry Address ] -> [ @Handle ]
-        _registryNamespace[_registry]._namespace = _nspace;
-        _registryNamespace[_registry]._length = _len;
+        _registryNamespace[registry].handle = namespaceHandle;
+        _registryNamespace[registry].length = namespaceLength;
+        _isNamespaceClaimed[namespaceHandle] = true;
 
-        // Mapping: [ @Handle ] -> [ Claimed ]
-        _isInitialized[_nspace] = true;
-
-        return true;
+        success = true;
     }
 }
