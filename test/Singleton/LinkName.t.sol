@@ -2,6 +2,7 @@
 pragma solidity ^0.8.30;
 
 import { Errors } from "@Errors/Errors.sol";
+import { RegistryErrors } from "@RegistryErrors/RegistryErrors.sol";
 import { Setup } from "@Setup/Setup.t.sol";
 
 contract LinkName is Setup {
@@ -45,7 +46,7 @@ contract LinkName is Setup {
     function test_link_From_External_Source() external initialized {
         // SHOULD REVERT
         bytes memory _name = bytes("cboi");
-        bytes4 revertSelector = Errors.Errors__InvalidCallSource.selector;
+        bytes4 revertSelector = RegistryErrors.Errors__InvalidCallSource.selector;
         _start(_name, EOA, EOA, EOA, revertSelector);
     }
 

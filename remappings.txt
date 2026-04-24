@@ -28,3 +28,4 @@
 @IBaseRegistry/=src/Interface/
 @Setup/=test/
 @MultiSigErrors/=src/SalvaMultiSig/
+@RegistryErrors/=src/SalvaRegistry/

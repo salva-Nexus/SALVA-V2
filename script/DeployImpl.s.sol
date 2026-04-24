@@ -19,12 +19,12 @@ contract DeployImpl is Script {
         // NGN Mainnet -> 0x78E9917e6A7D7DD2fd3fc031723741F4f755641C
         // NGN Testnet -> 0xae7597fa3414Bc94254fA7777663882355ED6Cb7
         // Singleton singProxyMainnet = Singleton();
-        // Singleton singProxyTestnet = Singleton(0x5A8fce211f5C2e72fA78C0Cfd51C6B1d623e7e02);
+        // Singleton singProxyTestnet = Singleton(0x6d40bf25Ffc5eeB200bb19b7D44c8e2A761f87ab);
         // MultiSig multsigproxyMainnet = MultiSig();
-        // MultiSig multsigproxyTestnet = MultiSig(0x85D096203B9B31b20Bd3b8dd2DF8A1D3B6702A6F);
+        // MultiSig multsigproxyTestnet = MultiSig(0x02cB7053Bcfc485439F2E2ca10a5AEFF309454B3);
         // RegistryFactory factoryProxyMainnet = RegistryFactory();
         // RegistryFactory factoryProxyTestnet =
-        // RegistryFactory(0xF7B6ef741217b94D1a1E3702936327548FAFbe48); MultiSig mulsig = new
+        // RegistryFactory(0xD082979428a6E93d7a350a7D04dd021e37c1528B); MultiSig mulsig = new
         // MultiSig();
         // Singleton singleton = new Singleton();
 

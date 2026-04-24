@@ -3,6 +3,7 @@ pragma solidity ^0.8.30;
 
 import { BaseRegistry } from "@BaseRegistry/BaseRegistry.sol";
 import { Errors } from "@Errors/Errors.sol";
+import { RegistryErrors } from "@RegistryErrors/RegistryErrors.sol";
 import { Setup } from "@Setup/Setup.t.sol";
 
 contract BaseRegistryTest is Setup {
@@ -10,15 +11,14 @@ contract BaseRegistryTest is Setup {
         _changePrank(address(multisig));
         address clone = _deployRegistry("@coinbase");
 
-        vm.expectRevert(Errors.Errors__AlreadyInitialized.selector);
+        vm.expectRevert(RegistryErrors.Errors__AlreadyInitialized.selector);
         BaseRegistry(clone).initialize(address(0x123), address(0x456), "@anothernspace");
     }
 
     function test_Resolve_Address() external {
         _changePrank(address(multisig));
         address clone = _deployRegistry("@coinbase");
-        // forge-lint: disable-next-line(unsafe-typecast)
-        singleton.initializeRegistry(clone, bytes31("@coinbase"), 0x09);
+        singleton.initializeRegistry(clone, bytes16("@coinbase"), 0x09);
 
         _changePrank(owner);
         bytes memory name = bytes("cboi");
