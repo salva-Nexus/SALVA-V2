@@ -2,6 +2,7 @@
 pragma solidity ^0.8.30;
 
 import { Errors } from "@Errors/Errors.sol";
+import { MultiSig } from "@MultiSig/MultiSig.sol";
 import { Setup } from "@Setup/Setup.t.sol";
 
 contract ValidatorProposal is Setup {
@@ -85,5 +86,17 @@ contract ValidatorProposal is Setup {
         _changePrank(owner);
         vm.expectRevert(Errors.Errors__ValidatorUpdateNotProposed.selector);
         multisig.validateValidatorUpdate(_addr);
+    }
+
+    function test_Flow() external {
+        _changePrank(owner);
+        multisig.proposeValidatorUpdate(makeAddr("val"), true);
+        multisig.validateValidatorUpdate(makeAddr("val"));
+        multisig.executeValidatorUpdate(makeAddr("val"));
+
+        MultiSig multisig2 = new MultiSig();
+        multisig.proposeUpgrade(address(multisig), address(multisig2), true);
+        multisig.validateUpgrade(address(multisig2));
+        multisig.executeUpgrade(address(multisig2));
     }
 }

@@ -116,6 +116,10 @@ contract Singleton is Initializable, UUPSUpgradeable, UnlinkName {
         impl = ERC1967Utils.getImplementation();
     }
 
+    function nameToByte(string memory _name) external pure returns (bytes memory _nb) {
+        _nb = bytes(_name);
+    }
+
     /**
      * @notice Returns the protocol version identifier.
      * @dev Pure function — value is baked into bytecode, no SLOAD required.

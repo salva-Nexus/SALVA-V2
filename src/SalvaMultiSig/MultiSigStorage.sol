@@ -31,7 +31,7 @@ abstract contract MultiSigStorage {
     // ─────────────────────────────────────────────────────────────────────────
 
     /// @notice Total number of active validators. Used as the quorum denominator.
-    uint256 internal _numOfValidators;
+    uint256 public _numOfValidators;
 
     /**
      * @notice Global pause flag for the MultiSig itself.

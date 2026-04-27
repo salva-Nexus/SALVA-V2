@@ -50,8 +50,8 @@ abstract contract Setup is Test, BaseTest {
         _stopBroadcast();
     }
 
-    function test_ToBytes() external pure {
-        console.logBytes(bytes("cboi@metamask"));
-        console.logBytes(bytes("joe@salva"));
+    function test_ToBytes() external view {
+        string memory _name = "cboi";
+        singleton.nameToByte(_name);
     }
 }

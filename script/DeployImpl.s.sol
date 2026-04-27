@@ -3,10 +3,10 @@ pragma solidity ^0.8.28;
 
 import { BaseRegistry } from "@BaseRegistry/BaseRegistry.sol";
 import { MultiSig } from "@MultiSig/MultiSig.sol";
+import { RegistryFactory } from "@RegistryFactory/RegistryFactory.sol";
 import { Singleton } from "@Singleton/Singleton.sol";
 import { Script } from "forge-std/Script.sol";
 import { console } from "forge-std/Test.sol";
-//import {RegistryFactory} from "@RegistryFactory/RegistryFactory.sol";
 
 contract DeployImpl is Script {
     modifier broadcastLive() {
@@ -19,27 +19,37 @@ contract DeployImpl is Script {
         // NGN Mainnet -> 0x78E9917e6A7D7DD2fd3fc031723741F4f755641C
         // NGN Testnet -> 0xae7597fa3414Bc94254fA7777663882355ED6Cb7
         // Singleton singProxyMainnet = Singleton();
-        // Singleton singProxyTestnet = Singleton(0x383418ec4170ed4f93FE18C11BF8437E667Bcb61);
+        // Singleton singProxyTestnet = Singleton(0x75e36Bb8F36A6aE1799E34E3161719964fECC22C);
         // MultiSig multsigproxyMainnet = MultiSig();
-        MultiSig multsigProxyTestnet = MultiSig(0x9D22b9B449D59bA32435d2155fF184b922205DB1);
+        MultiSig multsigProxyTestnet = MultiSig(0x361A059ae5ef356f70DD535dc3f5A7db59350Ec6);
         // RegistryFactory factoryProxyMainnet = RegistryFactory();
-        // RegistryFactory factoryProxyTestnet =
-        // RegistryFactory(0xE777e4038697C0Db37273DA0D50f3022c14e153E);
-        // MultiSig mulsig = new MultiSig();
-        // Singleton singleton = new Singleton()
-        // 0xb298626ec29fcecd98d54ba542c6d391d3123cb7
-        multsigProxyTestnet.proposeUpgrade(address(multsigProxyTestnet), address(mulsig), true);
-        multsigProxyTestnet.validateUpgrade(address(mulsig));
-        multsigProxyTestnet.executeUpgrade(address(mulsig));
+        RegistryFactory factoryProxyTestnet =
+            RegistryFactory(0x7B56bc1e4eFCAED94882F69003087Eef93aC4c41);
+        //MultiSig multisig = new MultiSig();
+        // Singleton singleton = new Singleton();
+        RegistryFactory factory = new RegistryFactory();
+
+        multsigProxyTestnet.cancelUpgrade(address(0x7B56bc1e4eFCAED94882F69003087Eef93aC4c41));
+
+        multsigProxyTestnet.proposeUpgrade(address(factoryProxyTestnet), address(factory), false);
+        multsigProxyTestnet.validateUpgrade(address(factory));
+        multsigProxyTestnet.executeUpgrade(address(factory));
+
+        // PROPOSAL
+        // multsigProxyTestnet.cancelValidatorUpdate(
+        //     address(0xF9580bf31a403Eea7D1a6e85725966B18DAc7251)
+        // );
 
         // multsigProxyTestnet.proposeValidatorUpdate(
-        //     address(0xF7cB5cd65D10A435A13DC264BaDcc4bd01ef0C43), false
+        //     address(0xF9580bf31a403Eea7D1a6e85725966B18DAc7251), true
         // );
         // multsigProxyTestnet.validateValidatorUpdate(
-        //     address(0xF7cB5cd65D10A435A13DC264BaDcc4bd01ef0C43)
+        //     address(0xF9580bf31a403Eea7D1a6e85725966B18DAc7251)
         // );
         // multsigProxyTestnet.executeValidatorUpdate(
-        //     address(0xF7cB5cd65D10A435A13DC264BaDcc4bd01ef0C43)
+        //     address(0xF9580bf31a403Eea7D1a6e85725966B18DAc7251)
         // );
+
+        console.log(address(factory));
     }
 }

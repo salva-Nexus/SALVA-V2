@@ -153,9 +153,8 @@ contract RegistryFactory is Initializable, UUPSUpgradeable, Context {
     // ─────────────────────────────────────────────────────────────────────────
 
     /// @dev See {IRegistryFactory} for full documentation.
-    function getSignerAndNGNs() external view whenNotPaused returns (address signer, address ngns) {
-        signer = _signer;
-        ngns = _ngns;
+    function getSignerAndNGNs() external view whenNotPaused returns (address, address) {
+        return (_signer, _ngns);
     }
 
     /// @dev See {IRegistryFactory} for full documentation.

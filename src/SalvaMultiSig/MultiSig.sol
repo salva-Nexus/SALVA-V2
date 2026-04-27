@@ -183,11 +183,12 @@ contract MultiSig is Initializable, Upgrades {
     function proposeValidatorUpdate(address target, bool action)
         external
         onlyValidators
-        returns (address, bool, uint256 required)
+        returns (address, bool, uint256)
     {
         ValidatorUpdateProposal storage v = _validatorUpdateProposal[target];
+        if (v.isProposed || v.isExecuted) revert Errors__ValidatorUpdateAlreadyProposed();
 
-        required = (_numOfValidators - 1) / 2 + 1;
+        uint256 required = (_numOfValidators - 1) / 2 + 1;
         v.addr = target;
         v.action = action;
         v.remaining = required;
@@ -251,6 +252,8 @@ contract MultiSig is Initializable, Upgrades {
                 revert Errors__TimelockNotElapsedOrNotValidated();
             }
         }
+
+        v.isExecuted = true;
         emit ValidatorUpdated(target, v.action);
         success = _applyValidatorUpdate(target, v.action);
     }

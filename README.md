@@ -72,7 +72,7 @@ Register once. Yours forever.
 
 | Contract      | Address                                                                                                                                            |
 | :------------ | :------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Singleton** | [`0x47b12874eFe8678c9EF7dd4188cB84Eea918eFFd`](https://sepolia.basescan.org/address/0xa77eF18F47DE0AcA77faBF329FE0f8820D7F98a6) |
+| **Singleton** | [`0x75e36Bb8F36A6aE1799E34E3161719964fECC22C`](https://sepolia.basescan.org/address/0xa77eF18F47DE0AcA77faBF329FE0f8820D7F98a6) |
 
 > The Singleton is the single source of truth for all namespace storage and alias resolution across every registry. Individual registry (gateway) addresses are deployed per namespace and can be queried from the factory.
 
