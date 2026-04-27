@@ -66,7 +66,7 @@ Register once. Yours forever.
 
 | Contract     | Address                                                                                                                              |
 | :----------- | :----------------------------------------------------------------------------------------------------------------------------------- |
-| **Singleton** | [`0x95ef0B638899ad4ADCb86D9491D8A3fFf97161C2`](https://basescan.org/address/0xaeb9fcC270F240FAA9A7f9d8b84eD6fE5c8f6b61) |
+| **Singleton** | [`0xaB2a6DD8458fa312b81bc5a19311CA1F2bE2aDfe`](https://basescan.org/address/0xaeb9fcC270F240FAA9A7f9d8b84eD6fE5c8f6b61) |
 
 ### 🔵 Base Testnet (Sepolia)
 
