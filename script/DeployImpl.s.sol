@@ -18,38 +18,36 @@ contract DeployImpl is Script {
     function run() external broadcastLive {
         // NGN Mainnet -> 0x78E9917e6A7D7DD2fd3fc031723741F4f755641C
         // NGN Testnet -> 0xae7597fa3414Bc94254fA7777663882355ED6Cb7
-        // Singleton singProxyMainnet = Singleton();
+        //Singleton singProxyMainnet = Singleton(0xc03eDeB2EF48B752ce46600d088206f5334e5546);
         // Singleton singProxyTestnet = Singleton(0x75e36Bb8F36A6aE1799E34E3161719964fECC22C);
-        // MultiSig multsigproxyMainnet = MultiSig();
-        MultiSig multsigProxyTestnet = MultiSig(0x361A059ae5ef356f70DD535dc3f5A7db59350Ec6);
-        // RegistryFactory factoryProxyMainnet = RegistryFactory();
-        RegistryFactory factoryProxyTestnet =
-            RegistryFactory(0x7B56bc1e4eFCAED94882F69003087Eef93aC4c41);
+        MultiSig multsigproxyMainnet = MultiSig(0xd2611e3acE93303052478af5EE5d13e2E9c63C7A);
+        // MultiSig multsigProxyTestnet = MultiSig(0x361A059ae5ef356f70DD535dc3f5A7db59350Ec6);
+        //RegistryFactory factoryProxyMainnet =
+        // RegistryFactory(0xdc2b063198Fa973F37232256Bb822F456332eFc8); RegistryFactory
+        // factoryProxyTestnet = RegistryFactory(0x7B56bc1e4eFCAED94882F69003087Eef93aC4c41);
         //MultiSig multisig = new MultiSig();
         // Singleton singleton = new Singleton();
-        RegistryFactory factory = new RegistryFactory();
+        // RegistryFactory factory = new RegistryFactory();
 
-        multsigProxyTestnet.cancelUpgrade(address(0x7B56bc1e4eFCAED94882F69003087Eef93aC4c41));
+        // multsigproxyMainnet.cancelValidatorUpdate(address(0x7291746F3fa41904cBfaBa5536B773794DBa01e1));
+        // multsigproxyMainnet.proposeValidatorUpdate(address(0x7291746F3fa41904cBfaBa5536B773794DBa01e1),
+        // false);
+        // multsigproxyMainnet.validateValidatorUpdate(address(0x7291746F3fa41904cBfaBa5536B773794DBa01e1));
+        // multsigproxyMainnet.executeValidatorUpdate(address(0x7291746F3fa41904cBfaBa5536B773794DBa01e1));
 
-        multsigProxyTestnet.proposeUpgrade(address(factoryProxyTestnet), address(factory), false);
-        multsigProxyTestnet.validateUpgrade(address(factory));
-        multsigProxyTestnet.executeUpgrade(address(factory));
+        // multsigProxyTestnet.proposeUpgrade(address(factoryProxyTestnet), address(factory),
+        // false); multsigProxyTestnet.validateUpgrade(address(factory));
+        // multsigProxyTestnet.executeUpgrade(address(factory));
 
-        // PROPOSAL
-        // multsigProxyTestnet.cancelValidatorUpdate(
-        //     address(0xF9580bf31a403Eea7D1a6e85725966B18DAc7251)
-        // );
+        multsigproxyMainnet.updateRecovery(
+            address(0x7291746F3fa41904cBfaBa5536B773794DBa01e1), false
+        );
 
-        // multsigProxyTestnet.proposeValidatorUpdate(
-        //     address(0xF9580bf31a403Eea7D1a6e85725966B18DAc7251), true
-        // );
-        // multsigProxyTestnet.validateValidatorUpdate(
-        //     address(0xF9580bf31a403Eea7D1a6e85725966B18DAc7251)
-        // );
-        // multsigProxyTestnet.executeValidatorUpdate(
-        //     address(0xF9580bf31a403Eea7D1a6e85725966B18DAc7251)
-        // );
+        // (address clone, , ) = multsigproxyMainnet.proposeInitRegistry("@trustwallet",
+        // address(singProxyMainnet), address(factoryProxyMainnet));
+        // multsigproxyMainnet.validateRegistryInit(clone);
+        // multsigproxyMainnet.executeInitRegistry(clone);
 
-        console.log(address(factory));
+        // console.log(clone);
     }
 }
