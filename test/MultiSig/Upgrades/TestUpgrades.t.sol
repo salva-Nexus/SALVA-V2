@@ -3,6 +3,7 @@ pragma solidity ^0.8.30;
 
 import { Errors } from "@Errors/Errors.sol";
 import { MultiSig } from "@MultiSig/MultiSig.sol";
+import { MultiSigErrors } from "@MultiSigErrors/MultiSigErrors.sol";
 import { RegistryFactory } from "@RegistryFactory/RegistryFactory.sol";
 import { Setup } from "@Setup/Setup.t.sol";
 import { Singleton } from "@Singleton/Singleton.sol";
@@ -65,7 +66,7 @@ contract TestUpgrades is Setup {
         multisig.proposeUpgrade(proxy, address(msig), true);
         multisig.validateUpgrade(address(msig));
         // time hasn't passed
-        vm.expectRevert(Errors.Errors__TimelockNotElapsedOrNotValidated.selector);
+        vm.expectRevert(MultiSigErrors.Errors__TimelockNotElapsedOrNotValidated.selector);
         multisig.executeUpgrade(address(msig));
 
         // time has passed

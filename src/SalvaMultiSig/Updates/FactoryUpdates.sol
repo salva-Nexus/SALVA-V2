@@ -67,7 +67,7 @@ abstract contract FactoryUpdates is StateUpdates {
         SignerUpdateProposal storage s = _signerUpdateProposal[newSigner];
         if (!s.isProposed || s.isExecuted) revert Errors__SignerUpdateNotProposed();
 
-        address caller = msg.sender;
+        address caller = _msgSender();
         if (s.hasValidated[caller]) revert Errors__AlreadyValidated();
 
         uint256 rem = s.remaining - 1;
@@ -94,7 +94,7 @@ abstract contract FactoryUpdates is StateUpdates {
      */
     function cancelSignerUpdate(address newSigner) external onlyValidators returns (bool success) {
         SignerUpdateProposal storage s = _signerUpdateProposal[newSigner];
-        s.hasValidated[msg.sender] = false;
+        s.hasValidated[_msgSender()] = false;
         delete _signerUpdateProposal[newSigner];
         emit SignerUpdateCancelled(newSigner);
         success = true;
@@ -120,7 +120,7 @@ abstract contract FactoryUpdates is StateUpdates {
     {
         SignerUpdateProposal storage s = _signerUpdateProposal[newSigner];
 
-        if (!_recovery[msg.sender]) {
+        if (!_recovery[_msgSender()]) {
             if (!s.isValidated || block.timestamp < s.timeLock) {
                 revert Errors__TimelockNotElapsedOrNotValidated();
             }
@@ -181,7 +181,7 @@ abstract contract FactoryUpdates is StateUpdates {
         BaseRegistryImplUpdateProposal storage b = _baseRegistryImplUpdateProposal[newImpl];
         if (!b.isProposed || b.isExecuted) revert Errors__BaseRegistryImplUpdateNotProposed();
 
-        address caller = msg.sender;
+        address caller = _msgSender();
         if (b.hasValidated[caller]) revert Errors__AlreadyValidated();
 
         uint256 rem = b.remaining - 1;
@@ -212,7 +212,7 @@ abstract contract FactoryUpdates is StateUpdates {
         returns (bool success)
     {
         BaseRegistryImplUpdateProposal storage b = _baseRegistryImplUpdateProposal[newImpl];
-        b.hasValidated[msg.sender] = false;
+        b.hasValidated[_msgSender()] = false;
         delete _baseRegistryImplUpdateProposal[newImpl];
         emit BaseRegistryImplUpdateCancelled(newImpl);
         success = true;
@@ -237,7 +237,7 @@ abstract contract FactoryUpdates is StateUpdates {
     {
         BaseRegistryImplUpdateProposal storage b = _baseRegistryImplUpdateProposal[newImpl];
 
-        if (!_recovery[msg.sender]) {
+        if (!_recovery[_msgSender()]) {
             if (!b.isValidated || block.timestamp < b.timeLock) {
                 revert Errors__TimelockNotElapsedOrNotValidated();
             }

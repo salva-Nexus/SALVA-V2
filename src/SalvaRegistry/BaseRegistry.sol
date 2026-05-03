@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
+import { Context } from "@Context/Context.sol";
 import { IRegistryFactory } from "@IRegistryFactory/IRegistryFactory.sol";
 import { ISalvaSingleton } from "@ISalvaSingleton/ISalvaSingleton.sol";
 import { RegistryErrors } from "@RegistryErrors/RegistryErrors.sol";
@@ -23,7 +24,7 @@ import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/Mes
  *      the `RegistryFactory` on every `link` call, enabling protocol-wide
  *      updates without re-deploying clones.
  */
-contract BaseRegistry is RegistryErrors {
+contract BaseRegistry is RegistryErrors, Context {
     using MessageHashUtils for bytes32;
     using SafeERC20 for IERC20;
 
@@ -84,7 +85,7 @@ contract BaseRegistry is RegistryErrors {
         external
         returns (bool isLinked)
     {
-        address caller = msg.sender;
+        address caller = _msgSender();
         bytes32 messageHash;
 
         // Assembly: gas-efficient keccak256(abi.encodePacked(name, wallet))
@@ -119,7 +120,7 @@ contract BaseRegistry is RegistryErrors {
 
     /// @dev See {IBaseRegistry} for full documentation.
     function unlink(bytes calldata name) external returns (bool isSuccess) {
-        isSuccess = ISalvaSingleton(_singleton).unlink(name, msg.sender);
+        isSuccess = ISalvaSingleton(_singleton).unlink(name, _msgSender());
         if (isSuccess) {
             emit UnlinkSuccess(name);
         }

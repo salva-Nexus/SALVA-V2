@@ -6,8 +6,8 @@ import { Storage } from "@Storage/Storage.sol";
 /**
  * @title Errors
  * @author cboi@Salva
- * @notice Centralised custom-error definitions for the entire Salva protocol.
- * @dev All contracts — Singleton modules, MultiSig modules, and registries —
+ * @notice Centralised custom-error definitions for the Salva Singleton and Registry contracts.
+ * @dev All Singleton-chain contracts — modules, registries, and the Singleton itself —
  *      inherit from this base so that error selectors are consistent and
  *      de-duplicated across the protocol.
  *
@@ -22,12 +22,6 @@ abstract contract Errors is Storage {
     /// @dev Caller is not authorised to perform this action.
     error Errors__NotAuthorized();
 
-    /// @dev Supplied address is the zero address.
-    error Errors__InvalidAddress();
-
-    /// @dev Input value must not be zero or empty.
-    error Errors__InvalidValues();
-
     // ─────────────────────────────────────────────────────────────────────────
     // REGISTRY / NAMESPACE
     // ─────────────────────────────────────────────────────────────────────────
@@ -35,23 +29,11 @@ abstract contract Errors is Storage {
     /// @dev Caller is not a registered registry contract.
     error Errors__NotRegistered();
 
-    /// @dev An active or completed proposal already exists for this registry.
-    error Errors__RegistryInitAlreadyProposed();
-
-    /// @dev Action requested on a registry with no active proposal.
-    error Errors__RegistryInitNotProposed();
-
     /// @dev Attempted to re-initialize a previously finalized registry or namespace.
     error Errors__DoubleInitialization();
 
     /// @dev Supplied namespace or address is invalid, too long, or missing the `@` prefix.
     error Errors__InvalidAddressOrNamespaceFormat();
-
-    /// @dev Registry clone has already been initialized — duplicate initialize call rejected.
-    error Errors__AlreadyInitialized();
-
-    /// @dev EIP-1167 clone deployment failed.
-    error Errors__CloneDeploymentFailed();
 
     // ─────────────────────────────────────────────────────────────────────────
     // NAME VALIDATION
@@ -81,85 +63,4 @@ abstract contract Errors is Storage {
 
     /// @dev The caller does not own the alias they are attempting to modify.
     error Errors__InvalidSender();
-
-    /// @dev An alias must resolve to exactly one data type.
-    error Errors__OnlyOneLinkToData();
-
-    /// @dev Only one value may be supplied.
-    error Errors__OnlyOneValue();
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // FEES
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /// @dev Attached fee is below the required minimum.
-    error Errors__NotEnoughFee();
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // SIGNATURE VERIFICATION
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /// @dev Signature recovery did not match the authorised Salva backend signer.
-    error Errors__InvalidCallSource();
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // MULTISIG — VALIDATOR GOVERNANCE
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /// @dev Validator has already cast a vote on this proposal.
-    error Errors__AlreadyValidated();
-
-    /// @dev An active or completed update already exists for this validator address.
-    error Errors__ValidatorUpdateAlreadyProposed();
-
-    /// @dev Action requested on a validator update with no active proposal.
-    error Errors__ValidatorUpdateNotProposed();
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // MULTISIG — UPGRADES
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /// @dev An active or executed upgrade proposal already exists for this implementation.
-    error Errors__UpgradeAlreadyProposed();
-
-    /// @dev Action requested on an upgrade with no active proposal.
-    error Errors__UpgradeNotProposed();
-
-    /// @dev Low-level `upgradeToAndCall` call failed.
-    error Errors__UpgradeFailed();
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // MULTISIG — SIGNER / IMPL UPDATES
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /// @dev A signer update proposal already exists for this address.
-    error Errors__SignerUpdateAlreadyProposed();
-
-    /// @dev Action requested on a signer update with no active proposal.
-    error Errors__SignerUpdateNotProposed();
-
-    /// @dev A BaseRegistry implementation update is already proposed for this address.
-    error Errors__BaseRegistryImplUpdateAlreadyProposed();
-
-    /// @dev Action requested on a BaseRegistry impl update with no active proposal.
-    error Errors__BaseRegistryImplUpdateNotProposed();
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // MULTISIG — TIMELOCK / PAUSE
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /// @dev Required timelock period has not yet elapsed, or proposal is not validated.
-    error Errors__TimelockNotElapsedOrNotValidated();
-
-    /// @dev Low-level external `pauseState()` call failed.
-    error Errors__ExternalPauseFailed();
-
-    /// @dev Low-level external `unpauseState()` call failed.
-    error Errors__ExternalUnpauseFailed();
-
-    /// @dev The singleton reference is immutable once set.
-    error Errors__AlreadySet();
-
-    /// @dev Low-level singleton call failed.
-    error Errors__CallFailed();
 }

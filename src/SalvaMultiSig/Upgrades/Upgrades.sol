@@ -73,7 +73,7 @@ abstract contract Upgrades is FactoryUpdates, UUPSUpgradeable {
         UpgradeProposal storage p = _upgradeProposal[newImpl];
         if (!p.isProposed || p.isExecuted) revert Errors__UpgradeNotProposed();
 
-        address caller = msg.sender;
+        address caller = _msgSender();
         if (p.hasValidated[caller]) revert Errors__AlreadyValidated();
 
         uint256 rem = p.remaining - 1;
@@ -100,7 +100,7 @@ abstract contract Upgrades is FactoryUpdates, UUPSUpgradeable {
      */
     function cancelUpgrade(address newImpl) external onlyValidators returns (bool success) {
         UpgradeProposal storage p = _upgradeProposal[newImpl];
-        p.hasValidated[msg.sender] = false;
+        p.hasValidated[_msgSender()] = false;
         delete _upgradeProposal[newImpl];
         emit UpgradeCancelled(newImpl);
         success = true;
@@ -127,7 +127,7 @@ abstract contract Upgrades is FactoryUpdates, UUPSUpgradeable {
     {
         UpgradeProposal storage p = _upgradeProposal[newImpl];
 
-        if (!_recovery[msg.sender]) {
+        if (!_recovery[_msgSender()]) {
             if (!p.isValidated || block.timestamp < p.timeLock) {
                 revert Errors__TimelockNotElapsedOrNotValidated();
             }

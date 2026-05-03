@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
+import { Context } from "@Context/Context.sol";
 import { MultiSigErrors } from "@MultiSigErrors/MultiSigErrors.sol";
 
 /**
@@ -14,7 +15,7 @@ import { MultiSigErrors } from "@MultiSigErrors/MultiSigErrors.sol";
  *
  *      Inherits `MultiSigErrors` (→ `Events` → `MultiSigStorage`).
  */
-abstract contract MultiSigModifier is MultiSigErrors {
+abstract contract MultiSigModifier is MultiSigErrors, Context {
     // ─────────────────────────────────────────────────────────────────────────
     // MODIFIERS
     // ─────────────────────────────────────────────────────────────────────────
@@ -55,7 +56,7 @@ abstract contract MultiSigModifier is MultiSigErrors {
      *      Passes if caller is an active validator OR a recovery address.
      */
     function _requireValidator() internal view {
-        address caller = msg.sender;
+        address caller = _msgSender();
         if (!_isValidator[caller] && !_recovery[caller]) {
             revert Errors__NotAuthorized();
         }
@@ -65,7 +66,7 @@ abstract contract MultiSigModifier is MultiSigErrors {
      * @dev Internal implementation for `onlyRecovery`.
      */
     function _requireRecovery() internal view {
-        if (!_recovery[msg.sender]) {
+        if (!_recovery[_msgSender()]) {
             revert Errors__NotAuthorized();
         }
     }

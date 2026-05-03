@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import { Errors } from "@Errors/Errors.sol";
 import { MultiSig } from "@MultiSig/MultiSig.sol";
+import { MultiSigErrors } from "@MultiSigErrors/MultiSigErrors.sol";
 import { Setup } from "@Setup/Setup.t.sol";
 
 contract ValidatorProposal is Setup {
@@ -42,7 +42,7 @@ contract ValidatorProposal is Setup {
 
         // Threshold not met
         vm.expectRevert(
-            abi.encodeWithSelector(Errors.Errors__TimelockNotElapsedOrNotValidated.selector)
+            abi.encodeWithSelector(MultiSigErrors.Errors__TimelockNotElapsedOrNotValidated.selector)
         );
         multisig.executeValidatorUpdate(makeAddr("val3"));
 
@@ -53,7 +53,7 @@ contract ValidatorProposal is Setup {
         // but enough time has not passed
 
         vm.expectRevert(
-            abi.encodeWithSelector(Errors.Errors__TimelockNotElapsedOrNotValidated.selector)
+            abi.encodeWithSelector(MultiSigErrors.Errors__TimelockNotElapsedOrNotValidated.selector)
         );
         multisig.executeValidatorUpdate(makeAddr("val3"));
         // now enough time has passed
@@ -78,13 +78,13 @@ contract ValidatorProposal is Setup {
         multisig.proposeValidatorUpdate(makeAddr("val"), true);
         multisig.validateValidatorUpdate(makeAddr("val"));
 
-        vm.expectRevert(Errors.Errors__AlreadyValidated.selector);
+        vm.expectRevert(MultiSigErrors.Errors__AlreadyValidated.selector);
         multisig.validateValidatorUpdate(makeAddr("val"));
     }
 
     function test_Unproposed_Request_Cannot_Be_Validated(address _addr) external {
         _changePrank(owner);
-        vm.expectRevert(Errors.Errors__ValidatorUpdateNotProposed.selector);
+        vm.expectRevert(MultiSigErrors.Errors__ValidatorUpdateNotProposed.selector);
         multisig.validateValidatorUpdate(_addr);
     }
 

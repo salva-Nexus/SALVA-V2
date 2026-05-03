@@ -50,7 +50,12 @@ abstract contract Resolve is NameLib {
      * @param aliasName  Full namespaced alias in UTF-8 bytes (e.g. `"charles[at]salva"`).
      * @return wallet    The wallet address bound to the alias, or `address(0)` if unmapped.
      */
-    function resolveAddress(bytes calldata aliasName) external view returns (address wallet) {
+    function resolveAddress(bytes calldata aliasName)
+        external
+        view
+        whenNotPaused(_paused)
+        returns (address wallet)
+    {
         uint256 fullLength;
         bytes32 nameData;
         assembly {

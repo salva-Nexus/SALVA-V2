@@ -109,7 +109,7 @@ contract MultiSig is Initializable, Upgrades {
         returns (address voter, bool voted, uint256 remaining)
     {
         InitRegistryProposal storage r = _initRegistryProposal[registry];
-        address caller = msg.sender;
+        address caller = _msgSender();
 
         if (!r.isProposed) revert Errors__RegistryInitNotProposed();
         if (r.hasValidated[caller]) revert Errors__AlreadyValidated();
@@ -143,7 +143,7 @@ contract MultiSig is Initializable, Upgrades {
     {
         InitRegistryProposal storage r = _initRegistryProposal[registry];
 
-        if (!_recovery[msg.sender]) {
+        if (!_recovery[_msgSender()]) {
             if (!r.isValidated || block.timestamp < r.timeLock) {
                 revert Errors__TimelockNotElapsedOrNotValidated();
             }
@@ -162,7 +162,7 @@ contract MultiSig is Initializable, Upgrades {
      */
     function cancelRegistryInit(address registry) external onlyValidators returns (bool success) {
         InitRegistryProposal storage r = _initRegistryProposal[registry];
-        r.hasValidated[msg.sender] = false;
+        r.hasValidated[_msgSender()] = false;
         delete _initRegistryProposal[registry];
         emit RegistryInitCancelled(registry);
         success = true;
@@ -213,7 +213,7 @@ contract MultiSig is Initializable, Upgrades {
         returns (address voter, bool voted, uint256 remaining)
     {
         ValidatorUpdateProposal storage v = _validatorUpdateProposal[target];
-        address caller = msg.sender;
+        address caller = _msgSender();
 
         if (!v.isProposed) revert Errors__ValidatorUpdateNotProposed();
         if (v.hasValidated[caller]) revert Errors__AlreadyValidated();
@@ -247,7 +247,7 @@ contract MultiSig is Initializable, Upgrades {
     {
         ValidatorUpdateProposal storage v = _validatorUpdateProposal[target];
 
-        if (!_recovery[msg.sender]) {
+        if (!_recovery[_msgSender()]) {
             if (!v.isValidated || block.timestamp < v.timeLock) {
                 revert Errors__TimelockNotElapsedOrNotValidated();
             }
@@ -265,7 +265,7 @@ contract MultiSig is Initializable, Upgrades {
      */
     function cancelValidatorUpdate(address target) external onlyValidators returns (bool success) {
         ValidatorUpdateProposal storage v = _validatorUpdateProposal[target];
-        v.hasValidated[msg.sender] = false;
+        v.hasValidated[_msgSender()] = false;
         delete _validatorUpdateProposal[target];
         emit ValidatorUpdateCancelled(target);
         success = true;

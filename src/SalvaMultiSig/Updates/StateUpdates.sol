@@ -89,7 +89,7 @@ abstract contract StateUpdates is MultiSigHelper {
         returns (bool voted, uint256 remaining)
     {
         UnpauseProposal storage u = _unpauseProposal[proxy];
-        address caller = msg.sender;
+        address caller = _msgSender();
 
         if (u.hasValidated[caller]) revert Errors__AlreadyValidated();
 
@@ -117,7 +117,7 @@ abstract contract StateUpdates is MultiSigHelper {
      */
     function cancelUnpause(address proxy) external onlyValidators returns (bool success) {
         UnpauseProposal storage u = _unpauseProposal[proxy];
-        u.hasValidated[msg.sender] = false;
+        u.hasValidated[_msgSender()] = false;
         delete _unpauseProposal[proxy];
         emit UnpauseCancelled(proxy);
         success = true;
@@ -137,7 +137,7 @@ abstract contract StateUpdates is MultiSigHelper {
     function executeUnpause(address proxy) external onlyValidators returns (bool success) {
         UnpauseProposal storage u = _unpauseProposal[proxy];
 
-        if (!_recovery[msg.sender]) {
+        if (!_recovery[_msgSender()]) {
             if (!u.isValidated || block.timestamp < u.timeLock) {
                 revert Errors__TimelockNotElapsedOrNotValidated();
             }
