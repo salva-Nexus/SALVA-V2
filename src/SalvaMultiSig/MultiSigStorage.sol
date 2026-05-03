@@ -235,5 +235,5 @@ abstract contract MultiSigStorage {
      * @dev Reserved gap for future state variables.
      *      Decrement the array size by 1 for each new variable added above.
      */
-    uint256[49] private __gap;
+    uint256[50] private __gap;
 }
