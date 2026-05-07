@@ -79,10 +79,10 @@ abstract contract MultiSigErrors is Events, MultiSigStorage {
     /// @dev Action requested on a signer update with no active proposal.
     error Errors__SignerUpdateNotProposed();
 
-    /// @dev A BaseRegistry implementation update is already proposed for this address.
+    /// @dev An implementation update is already proposed for this address.
     error Errors__ImplUpdateAlreadyProposed();
 
-    /// @dev Action requested on a BaseRegistry impl update with no active proposal.
+    /// @dev Action requested on an impl update with no active proposal.
     error Errors__ImplUpdateNotProposed();
 
     // ─────────────────────────────────────────────────────────────────────────
