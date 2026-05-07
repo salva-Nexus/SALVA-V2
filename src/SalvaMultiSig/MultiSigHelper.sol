@@ -71,16 +71,12 @@ abstract contract MultiSigHelper is MultiSigModifier {
 
     /**
      * @notice Returns the number of validator votes still required to reach quorum
-     *         on a BaseRegistry implementation update proposal.
+     *         on an implementation update proposal.
      * @param newImpl  The proposed new implementation address identifying the proposal.
      * @return remaining  Votes still needed.
      */
-    function baseRegistryImplUpdateVotesRemaining(address newImpl)
-        external
-        view
-        returns (uint256 remaining)
-    {
-        remaining = _baseRegistryImplUpdateProposal[newImpl].remaining;
+    function ImplUpdateVotesRemaining(address newImpl) external view returns (uint256 remaining) {
+        remaining = _ImplUpdateProposal[newImpl].remaining;
     }
 
     /**

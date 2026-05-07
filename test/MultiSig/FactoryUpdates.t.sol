@@ -40,9 +40,9 @@ contract FactoryUpdates is Setup {
         address proxy = address(factory);
         address pImpl = factory.getBaseRegistryImplementation();
 
-        multisig.proposeBaseRegistryImplUpdate(proxy, newImpl);
-        multisig.validateBaseRegistryImplUpdate(newImpl);
-        multisig.executeBaseRegistryImplUpdate(newImpl);
+        multisig.proposeImplUpdate(proxy, newImpl);
+        multisig.validateImplUpdate(newImpl);
+        multisig.executeImplUpdate(newImpl);
 
         address nImpl = factory.getBaseRegistryImplementation();
         assertNotEq(nImpl, pImpl);

@@ -17,6 +17,8 @@ import { StateUpdates } from "@StateUpdates/StateUpdates.sol";
  *      this as fee changes are considered lower-risk.
  */
 abstract contract FactoryUpdates is StateUpdates {
+    // REGISTRY FACTORY
+
     // ─────────────────────────────────────────────────────────────────────────
     // SIGNER UPDATE — PROPOSE
     // ─────────────────────────────────────────────────────────────────────────
@@ -144,13 +146,13 @@ abstract contract FactoryUpdates is StateUpdates {
      * @param newImpl  The proposed new BaseRegistry implementation address.
      * @return required  Number of validator votes required to reach quorum.
      */
-    function proposeBaseRegistryImplUpdate(address proxy, address newImpl)
-        external
+    function proposeImplUpdate(address proxy, address newImpl)
+        public
         onlyValidators
         returns (address, uint256 required)
     {
-        BaseRegistryImplUpdateProposal storage b = _baseRegistryImplUpdateProposal[newImpl];
-        if (b.isProposed || b.isExecuted) revert Errors__BaseRegistryImplUpdateAlreadyProposed();
+        ImplUpdateProposal storage b = _ImplUpdateProposal[newImpl];
+        if (b.isProposed || b.isExecuted) revert Errors__ImplUpdateAlreadyProposed();
 
         required = (_numOfValidators - 1) / 2 + 1;
         b.newImpl = newImpl;
@@ -158,7 +160,7 @@ abstract contract FactoryUpdates is StateUpdates {
         b.remaining = required;
         b.isProposed = true;
 
-        emit BaseRegistryImplUpdateProposed(newImpl, required);
+        emit ImplUpdateProposed(newImpl, required);
         return (newImpl, required);
     }
 
@@ -173,13 +175,13 @@ abstract contract FactoryUpdates is StateUpdates {
      * @return voted     `true` — confirms the vote was cast.
      * @return remaining  Votes still needed to reach quorum.
      */
-    function validateBaseRegistryImplUpdate(address newImpl)
-        external
+    function validateImplUpdate(address newImpl)
+        public
         onlyValidators
         returns (bool voted, uint256 remaining)
     {
-        BaseRegistryImplUpdateProposal storage b = _baseRegistryImplUpdateProposal[newImpl];
-        if (!b.isProposed || b.isExecuted) revert Errors__BaseRegistryImplUpdateNotProposed();
+        ImplUpdateProposal storage b = _ImplUpdateProposal[newImpl];
+        if (!b.isProposed || b.isExecuted) revert Errors__ImplUpdateNotProposed();
 
         address caller = _msgSender();
         if (b.hasValidated[caller]) revert Errors__AlreadyValidated();
@@ -193,7 +195,7 @@ abstract contract FactoryUpdates is StateUpdates {
             b.isValidated = true;
         }
 
-        emit BaseRegistryImplUpdateValidated(caller, true, rem);
+        emit ImplUpdateValidated(caller, true, rem);
         return (true, rem);
     }
 
@@ -206,15 +208,11 @@ abstract contract FactoryUpdates is StateUpdates {
      * @param newImpl   The proposed implementation address identifying the proposal.
      * @return success  `true` on successful cancellation.
      */
-    function cancelBaseRegistryImplUpdate(address newImpl)
-        external
-        onlyValidators
-        returns (bool success)
-    {
-        BaseRegistryImplUpdateProposal storage b = _baseRegistryImplUpdateProposal[newImpl];
+    function cancelImplUpdate(address newImpl) public onlyValidators returns (bool success) {
+        ImplUpdateProposal storage b = _ImplUpdateProposal[newImpl];
         b.hasValidated[_msgSender()] = false;
-        delete _baseRegistryImplUpdateProposal[newImpl];
-        emit BaseRegistryImplUpdateCancelled(newImpl);
+        delete _ImplUpdateProposal[newImpl];
+        emit ImplUpdateCancelled(newImpl);
         success = true;
     }
 
@@ -229,13 +227,13 @@ abstract contract FactoryUpdates is StateUpdates {
      * @param newImpl   The proposed implementation address identifying the proposal.
      * @return success  `true` on successful execution.
      */
-    function executeBaseRegistryImplUpdate(address newImpl)
+    function executeImplUpdate(address newImpl)
         external
         onlyValidators
         whenNotPaused
         returns (bool success)
     {
-        BaseRegistryImplUpdateProposal storage b = _baseRegistryImplUpdateProposal[newImpl];
+        ImplUpdateProposal storage b = _ImplUpdateProposal[newImpl];
 
         if (!_recovery[_msgSender()]) {
             if (!b.isValidated || block.timestamp < b.timeLock) {
@@ -244,8 +242,8 @@ abstract contract FactoryUpdates is StateUpdates {
         }
 
         b.isExecuted = true;
-        emit BaseRegistryImplUpdateExecuted(newImpl);
-        success = IRegistryFactory(b.proxy).updateImplementation(newImpl);
+        emit ImplUpdateExecuted(newImpl);
+        success = _updateImplementation(b.proxy, newImpl);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -268,5 +266,20 @@ abstract contract FactoryUpdates is StateUpdates {
         returns (bool success)
     {
         success = IRegistryFactory(proxy).updateFee(newFee);
+    }
+
+    function _updateImplementation(address proxy, address newImpl)
+        internal
+        returns (bool _success)
+    {
+        bytes4 selector = 0x025b22bc;
+        assembly ("memory-safe") {
+            mstore(0x00, selector)
+            mstore(0x04, newImpl)
+            _success := call(gas(), proxy, 0x00, 0x00, 0x24, 0x00, 0x00)
+            if iszero(_success) {
+                revert(0x00, 0x00)
+            }
+        }
     }
 }

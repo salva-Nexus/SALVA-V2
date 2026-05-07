@@ -6,6 +6,7 @@ solc = "0.8.30"
 
 
 remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"]
+
 [fuzz]
 runs = 100
 

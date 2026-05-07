@@ -178,9 +178,9 @@ abstract contract MultiSigStorage {
     mapping(address newSigner => SignerUpdateProposal proposal) internal _signerUpdateProposal;
 
     /**
-     * @notice State for a BaseRegistry implementation update proposal.
+     * @notice State for a implementation update proposal.
      *
-     * @param newImpl      The proposed new BaseRegistry implementation address.
+     * @param newImpl      The proposed new implementation address.
      * @param proxy        The RegistryFactory proxy to update.
      * @param remaining    Votes still required to reach quorum.
      * @param isProposed   Whether this proposal is active.
@@ -189,7 +189,7 @@ abstract contract MultiSigStorage {
      * @param isValidated  Whether quorum has been reached.
      * @param isExecuted   Whether this proposal has been executed.
      */
-    struct BaseRegistryImplUpdateProposal {
+    struct ImplUpdateProposal {
         address newImpl;
         address proxy;
         uint256 remaining;
@@ -202,8 +202,7 @@ abstract contract MultiSigStorage {
 
     /// @dev Maps each proposed implementation address to its active BaseRegistry impl update
     /// proposal.
-    mapping(address newImpl => BaseRegistryImplUpdateProposal proposal) internal
-        _baseRegistryImplUpdateProposal;
+    mapping(address newImpl => ImplUpdateProposal proposal) internal _ImplUpdateProposal;
 
     /**
      * @notice State for a pause/unpause proposal targeting a specific contract.

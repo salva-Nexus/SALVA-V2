@@ -62,18 +62,16 @@ abstract contract Events {
     // ─────────────────────────────────────────────────────────────────────────
 
     /// @notice Emitted when a BaseRegistry implementation update proposal is created.
-    event BaseRegistryImplUpdateProposed(address indexed newImpl, uint256 requiredVotes);
+    event ImplUpdateProposed(address indexed newImpl, uint256 requiredVotes);
 
     /// @notice Emitted when a validator casts a vote on a BaseRegistry impl update proposal.
-    event BaseRegistryImplUpdateValidated(
-        address indexed voter, bool voted, uint256 remainingVotes
-    );
+    event ImplUpdateValidated(address indexed voter, bool voted, uint256 remainingVotes);
 
     /// @notice Emitted when a BaseRegistry implementation update proposal is cancelled.
-    event BaseRegistryImplUpdateCancelled(address indexed newImpl);
+    event ImplUpdateCancelled(address indexed newImpl);
 
     /// @notice Emitted when a BaseRegistry implementation update is successfully executed.
-    event BaseRegistryImplUpdateExecuted(address indexed newImpl);
+    event ImplUpdateExecuted(address indexed newImpl);
 
     // ─────────────────────────────────────────────────────────────────────────
     // PAUSE / UNPAUSE

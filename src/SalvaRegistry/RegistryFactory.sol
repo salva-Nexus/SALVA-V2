@@ -120,9 +120,8 @@ contract RegistryFactory is Initializable, UUPSUpgradeable, Context {
     }
 
     /// @dev See {IRegistryFactory} for full documentation.
-    function updateImplementation(address newImpl) external onlyMultiSig returns (bool success) {
+    function updateImplementation(address newImpl) external onlyMultiSig {
         _implementation = newImpl;
-        success = true;
     }
 
     /// @dev See {IRegistryFactory} for full documentation.
