@@ -31,6 +31,7 @@ contract RegistryProposal is Setup {
 
     function test_Events() external {
         vm.recordLogs();
+        _changePrank(owner);
         multisig.proposeInitRegistry("@coinbase", address(singleton), address(factory));
 
         Vm.Log[] memory entries = vm.getRecordedLogs();

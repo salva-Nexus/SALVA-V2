@@ -21,7 +21,7 @@ contract DeployV2 is Script {
     }
 
     function deploy() public broadcast {
-        address backend = 0xfD5A9828bac27495FAb7F6174b3de386E0554187;
+        address backend = 0x9Da6C69815A2b9FFe7eE08A0be00EF181881Ad71;
         address ngns = 0x78E9917e6A7D7DD2fd3fc031723741F4f755641C;
 
         //============ MULTISIG ============

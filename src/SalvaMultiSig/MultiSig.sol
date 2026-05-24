@@ -73,6 +73,7 @@ contract MultiSig is Initializable, Upgrades {
      */
     function proposeInitRegistry(string memory namespace_, address singleton, address factory)
         external
+        onlyValidators
         returns (address clone, bytes31 packed, uint256 required)
     {
         clone = _deployClone(singleton, factory, namespace_);
