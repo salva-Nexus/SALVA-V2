@@ -129,7 +129,7 @@ contract LinkName is Setup {
     }
 
     function test_Absolute() external initialized {
-        bytes memory name = bytes("charles@salva");
+        bytes memory name = bytes("charles");
         _start(name, owner, owner, owner, 0);
     }
 }
