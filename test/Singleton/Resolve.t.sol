@@ -6,7 +6,7 @@ import { Setup } from "@Setup/Setup.t.sol";
 
 contract Resolve is Setup {
     function test_Cannot_Resolve_When_Paused() external initialized {
-        bytes memory _name = bytes("cboi");
+        bytes memory _name = bytes("pay.cboi");
         _start(_name, EOA, owner, owner, 0);
 
         multisig.pauseState(address(singleton), 1);
@@ -23,7 +23,7 @@ contract Resolve is Setup {
         multisig.validateUnpause(address(singleton));
         multisig.executeUnpause(address(singleton));
 
-        address expectedAddress = registry.resolveAddress(bytes("cboi@salva"));
+        address expectedAddress = registry.resolveAddress(bytes("cboi.pay@salva"));
         assertEq(expectedAddress, EOA);
     }
 }

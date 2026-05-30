@@ -71,9 +71,9 @@ abstract contract NameLib is Modifier {
      *         canonical form into memory at `0x00` for subsequent hashing.
      *
      * @dev Anti-phishing guarantee:
-     *        Aliases containing exactly one underscore are split into two segments
+     *        Aliases containing exactly one dot are split into two segments
      *        and reconstructed in ascending lexicographic order. This means
-     *        `"charles_okoronkwo"` and `"okoronkwo_charles"` produce identical memory
+     *        `"charles.okoronkwo"` and `"okoronkwo.charles"` produce identical memory
      *        output and therefore the same storage key — preventing look-alike squatting.
      *
      *      Namespace-aware termination:
@@ -84,7 +84,7 @@ abstract contract NameLib is Modifier {
      *      Character rules enforced when `validationMode == 0` (link write path):
      *        · a–z      (0x61–0x7a)
      *        · 2–9      (0x32–0x39)
-     *        · `_`      (0x5f) — maximum one occurrence
+     *        · `.`      (0x2e) — maximum one occurrence
      *        · digits 0, 1 and all uppercase letters are rejected
      *
      *      When `validationMode == 1` (unlink or view path) character validation is
@@ -104,7 +104,7 @@ abstract contract NameLib is Modifier {
             revert Errors__MaxNameLengthExceeded();
         }
 
-        uint8 underscoreCount;
+        uint8 dotCount;
         bytes32 firstSegment;
         uint256 firstSegmentLength;
         bytes32 secondSegment;
@@ -122,7 +122,7 @@ abstract contract NameLib is Modifier {
             if (validationMode) {
                 if (
                     !(char >= 0x61 && char <= 0x7a) && !(char >= 0x32 && char <= 0x39)
-                        && char != 0x5f
+                        && char != 0x2e
                 ) {
                     revert Errors__InvalidCharacter();
                 }
@@ -131,7 +131,7 @@ abstract contract NameLib is Modifier {
             // ── STEP 2 · SEGMENT CAPTURE
             // ──────────────────────────────────
             if (!isSplit) {
-                if (char != 0x5f) {
+                if (char != 0x2e) {
                     assembly ("memory-safe") {
                         switch eq(cursor, 0x00)
                         case 0x01 {
@@ -144,14 +144,14 @@ abstract contract NameLib is Modifier {
                     }
                 }
 
-                if (char == 0x5f || i == lastIdx || nextChar == 0x40) {
+                if (char == 0x2e || i == lastIdx || nextChar == 0x40) {
                     assembly ("memory-safe") {
                         firstSegmentLength := cursor
                         firstSegment := mload(0x00)
                         cursor := 0x00
                     }
 
-                    if (nextChar > 0x00 && nextChar != 0x40 && char != 0x5f) {
+                    if (nextChar > 0x00 && nextChar != 0x40 && char != 0x2e) {
                         revert Errors__InvalidLength();
                     }
                 }
@@ -184,11 +184,11 @@ abstract contract NameLib is Modifier {
                 }
             }
 
-            if (char == 0x5f) {
+            if (char == 0x2e) {
                 unchecked {
-                    underscoreCount++;
+                    dotCount++;
                 }
-                if (underscoreCount > 1) revert Errors__MaxOneUnderscoreAllowed();
+                if (dotCount > 1) revert Errors__MaxOneDotAllowed();
                 isSplit = true;
             }
             unchecked {
@@ -196,7 +196,7 @@ abstract contract NameLib is Modifier {
             }
         }
 
-        if (underscoreCount > 0) {
+        if (dotCount > 0) {
             processedLength = _normalizeSegments(
                 firstSegment, firstSegmentLength, secondSegment, secondSegmentLength
             );
@@ -208,9 +208,9 @@ abstract contract NameLib is Modifier {
     }
 
     /**
-     * @notice Reconstructs an underscore-split alias in ascending lexicographic order.
+     * @notice Reconstructs a dot-split alias in ascending lexicographic order.
      * @dev Both segments must be non-empty. The larger segment is placed first,
-     *      the underscore separator inserted, then the smaller segment appended.
+     *      the dot separator inserted, then the smaller segment appended.
      *      This guarantees a canonical, order-independent storage key.
      *
      * @param firstSegment        Raw bytes32 of the first alias segment.
@@ -238,7 +238,7 @@ abstract contract NameLib is Modifier {
             if lt(secondSegment, firstSegment) {
                 mstore(0x00, upperSegment)
             }
-            mstore8(add(0x00, upperLength), 0x5f)
+            mstore8(add(0x00, upperLength), 0x2e) // `.` separator
             mstore(add(add(0x00, upperLength), 0x01), lowerSegment)
         }
 

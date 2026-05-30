@@ -38,7 +38,7 @@ contract LinkName is Setup {
     }
 
     function test_Name_Not_Exceeding_32_Bytes() external initialized {
-        bytes memory _name = bytes("my_name_is_long_and_cause_this_to_revert");
+        bytes memory _name = bytes("xxxmynameislongandcausethistorevert");
         bytes4 expectedRevert = Errors.Errors__MaxNameLengthExceeded.selector;
         _start(_name, owner, owner, owner, expectedRevert);
     }
@@ -50,16 +50,8 @@ contract LinkName is Setup {
         _start(_name, EOA, EOA, EOA, revertSelector);
     }
 
-    function test_Phishing_Resistance(string memory _rNames) external initialized {
-        vm.assume(bytes(_rNames).length > 0 && bytes(_rNames).length <= 31);
-        for (uint256 i = 0; i < bytes(_rNames).length;) {
-            bytes1 char = bytes(_rNames)[i];
-            vm.assume((char < 0x32 && char > 0x39) || (char < 0x61 && char > 0x7A) || char != 0x5F);
-
-            unchecked {
-                i++;
-            }
-        }
+    function test_Phishing_Resistance() external initialized {
+        string memory _rNames = "ABCDEFGHIJKLMNOPQRSTUVWXYZ_-01";
 
         _changePrank(owner);
         _transfer(makeAddr("EOA2"));
@@ -69,14 +61,14 @@ contract LinkName is Setup {
         bytes4 revertSelector = Errors.Errors__InvalidCharacter.selector;
         _start(_name0, makeAddr("EOA2"), owner, makeAddr("EOA2"), revertSelector);
 
-        bytes memory _name1 = bytes("_rNames");
+        bytes memory _name1 = bytes(_rNames);
         _start(_name1, makeAddr("EOA2"), owner, makeAddr("EOA2"), revertSelector);
 
-        bytes memory _name2 = bytes("cboi_");
+        bytes memory _name2 = bytes("cboi.");
         bytes4 revertSelector2 = Errors.Errors__InvalidSubNameFormat.selector;
         _start(_name2, makeAddr("EOA2"), owner, makeAddr("EOA2"), revertSelector2);
 
-        bytes memory _name3 = bytes("_cboi");
+        bytes memory _name3 = bytes(".cboi");
         _start(_name3, makeAddr("EOA2"), owner, makeAddr("EOA2"), revertSelector2);
     }
 
@@ -99,8 +91,8 @@ contract LinkName is Setup {
         bytes4 expectedRevert = Errors.Errors__NameTaken.selector;
         _start(_rName, EOA, owner, EOA, expectedRevert);
 
-        _start(bytes("cboi_salva"), owner, owner, owner, 0);
-        _start(bytes("salva_cboi"), owner, owner, owner, expectedRevert);
+        _start(bytes("cboi.salva"), owner, owner, owner, 0);
+        _start(bytes("salva.cboi"), owner, owner, owner, expectedRevert);
     }
 
     function test_Arbitrary() external initialized {
@@ -108,7 +100,7 @@ contract LinkName is Setup {
         // should revert, cus extra data is 0
         _changePrank(address(registry));
         bytes memory data1 =
-            hex"85b830a60000000000000000000000000000000000000000000000000000000000000060000000000000000000000000f2b2ade8117d3d777a679e73e60795a7e6771f19000000000000000000000000f2b2ade8117d3d777a679e73e60795a7e6771f190000000000000000000000000000000000000000000000000000000000000012636861726c65735f6f6b6f726f6e6b776f000000000000000000000000000000";
+            hex"85b830a60000000000000000000000000000000000000000000000000000000000000060000000000000000000000000f2b2ade8117d3d777a679e73e60795a7e6771f19000000000000000000000000f2b2ade8117d3d777a679e73e60795a7e6771f190000000000000000000000000000000000000000000000000000000000000012636861726c65732e6f6b6f726f6e6b776f000000000000000000000000000000";
 
         (bool success, bytes memory rData) = address(singleton).call(data1);
         assertEq(success, false);
@@ -119,7 +111,7 @@ contract LinkName is Setup {
         // Reduced length (not actual length)
         // Should revert
         bytes memory data2 =
-            hex"85b830a60000000000000000000000000000000000000000000000000000000000000060000000000000000000000000f2b2ade8117d3d777a679e73e60795a7e6771f19000000000000000000000000f2b2ade8117d3d777a679e73e60795a7e6771f190000000000000000000000000000000000000000000000000000000000000010636861726c65735f6f6b6f726f6e6b776f000000000000000000000000000000";
+            hex"85b830a60000000000000000000000000000000000000000000000000000000000000060000000000000000000000000f2b2ade8117d3d777a679e73e60795a7e6771f19000000000000000000000000f2b2ade8117d3d777a679e73e60795a7e6771f190000000000000000000000000000000000000000000000000000000000000010636861726c65732e6f6b6f726f6e6b776f000000000000000000000000000000";
         (bool success2, bytes memory rData2) = address(singleton).call(data2);
         assertEq(success2, false);
 
@@ -129,7 +121,7 @@ contract LinkName is Setup {
     }
 
     function test_Absolute() external initialized {
-        bytes memory name = bytes("charles");
+        bytes memory name = bytes("charles@salva");
         _start(name, owner, owner, owner, 0);
     }
 }

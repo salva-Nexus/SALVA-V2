@@ -53,7 +53,7 @@ Salva is a secure, decentralized naming layer that lets any app — a wallet, a 
 alice@salva          →   0x123...abc
 bob@coinbase         →   0x456...def
 miracle@salva        →   0x789...ghi
-miracle_biz@coinbase →   0xabc...jkl
+miracle.biz@coinbase →   0xabc...jkl
 ```
 
 Register once. Yours forever.
@@ -66,7 +66,7 @@ Register once. Yours forever.
 
 | Contract     | Address                                                                                                                              |
 | :----------- | :----------------------------------------------------------------------------------------------------------------------------------- |
-| **Singleton** | [`0xc03eDeB2EF48B752ce46600d088206f5334e5546`](https://basescan.org/address/0xaeb9fcC270F240FAA9A7f9d8b84eD6fE5c8f6b61) |
+| **Singleton** | [`0xc03eDeB2EF48B752ce46600d088206f5334e5546`](https://basescan.org/address/0xD5B1Cb07403b946b536c77a6102723808971c87C) |
 
 ### 🔵 Base Testnet (Sepolia)
 
@@ -93,7 +93,7 @@ Namespaces are protected by a **Guardians system** — a MultiSig governance lay
 Salva automatically neutralizes look-alike scams:
 
 - All names are **lowercased** at the contract level
-- Underscore-split names are **alphabetically normalized** — `charles_obi` and `obi_charles` resolve to the same record
+- Underscore-split names are **alphabetically normalized** — `charles.gofund` and `gofund.charles` resolve to the same record
 
 Name-order squatting becomes economically pointless. There is nothing to squat.
 
@@ -153,8 +153,8 @@ One function call. One storage slot. Deterministic.
 | `alice`               | `@salva`       | `0x123...abc`       |
 | `bob`                 | `@coinbase`    | `0x456...def`       |
 | `miracle`             | `@salva`       | `0x789...ghi`       |
-| `miracle_business`    | `@coinbase`    | `0xabc...jkl`       |
-| `aggregatorv3_base`   | `@chainlink`   | `0xaggrv3...addr`   |
+| `miracle.business`    | `@coinbase`    | `0xabc...jkl`       |
+| `aggregatorv3.base`   | `@chainlink`   | `0xaggrv3...addr`   |
 
 ---
 

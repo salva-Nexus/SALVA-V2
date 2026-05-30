@@ -11,11 +11,11 @@ contract Withdrawal is Setup {
     using SafeERC20 for IERC20;
 
     function test_Withdrawal() external validateAndEecuteRegistryInit {
-        bytes memory _name = bytes("okoronkwo_charles");
+        bytes memory _name = bytes("pay.cboi");
         _start(_name, owner, owner, owner, 0);
         _transfer(EOA);
 
-        bytes memory _name2 = bytes("okoronkwo_joe");
+        bytes memory _name2 = bytes("pay.joe");
         _start(_name2, EOA, owner, EOA, 0);
 
         assertEq(IERC20(NGNs).balanceOf(address(singleton)), 200e6);

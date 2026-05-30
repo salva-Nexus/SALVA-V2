@@ -42,16 +42,16 @@ abstract contract Errors is Storage {
     /// @dev Alias exceeds the maximum allowed length of 32 bytes.
     error Errors__MaxNameLengthExceeded();
 
-    /// @dev Character is not in the permitted set (a–z, 2–9, `_`).
+    /// @dev Character is not in the permitted set (a–z, 2–9, `.`).
     error Errors__InvalidCharacter();
 
-    /// @dev An alias may contain at most one underscore.
-    error Errors__MaxOneUnderscoreAllowed();
+    /// @dev An alias may contain at most one dot.
+    error Errors__MaxOneDotAllowed();
 
     /// @dev Calldata length field does not match actual payload — possible manipulation.
     error Errors__InvalidLength();
 
-    /// @dev A sub-name segment on either side of `_` must not be empty.
+    /// @dev A sub-name segment on either side of `.` must not be empty.
     error Errors__InvalidSubNameFormat();
 
     // ─────────────────────────────────────────────────────────────────────────
