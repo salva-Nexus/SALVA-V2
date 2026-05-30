@@ -80,12 +80,12 @@ abstract contract LinkName is Initialize {
         }
 
         // validationMode = 0 → enforce strict a-z, 2-9, _ rules (write path)
-        uint256 processedNameLen = _normalizeAndValidate(nameLength, nameBytes, 0);
+        uint256 processedNameLen = _normalizeAndValidate(nameLength, nameBytes, true);
 
         uint256 fullLength = processedNameLen + uint256(uint8(namespaceLength));
 
-        // skipCollisionCheck = 0 → reject already-taken names
-        bytes32 nameHash = _computeNameHash(namespaceHandle, processedNameLen, fullLength, 0);
+        // skipCollisionCheck = true → reject already-taken names
+        bytes32 nameHash = _computeNameHash(namespaceHandle, processedNameLen, fullLength, false);
 
         isLinked = _performLinkToWallet(nameHash, wallet, caller);
     }

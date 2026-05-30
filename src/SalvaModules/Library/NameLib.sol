@@ -39,25 +39,25 @@ abstract contract NameLib is Modifier {
      * @param namespaceHandle  The 31-byte namespace handle (e.g. `[at]salva\x00...`).
      * @param nameLength       Byte length of the normalized name segment.
      * @param fullLength       Total bytes to hash: `nameLength + namespaceLength`.
-     * @param skipCollisionCheck  Pass `0` to run a collision guard; any other value skips it.
+     * @param skipCollisionCheck  Pass `false` to run a collision guard; any other value skips it.
      * @return nameHash        The welded keccak256 storage key.
      */
     function _computeNameHash(
         bytes31 namespaceHandle,
         uint256 nameLength,
         uint256 fullLength,
-        uint256 skipCollisionCheck
+        bool skipCollisionCheck
     ) internal view returns (bytes32 nameHash) {
         assembly ("memory-safe") {
             // Append namespace immediately after the name bytes already in memory.
             // Creates a contiguous buffer: [ name_data ][ namespace_handle ]
-            mstore(add(0x00, nameLength), namespaceHandle)
+            mstore(nameLength, namespaceHandle)
 
             // Hash the full buffer to produce the unique storage key.
             nameHash := keccak256(0x00, fullLength)
         }
 
-        if (skipCollisionCheck == 0) {
+        if (!skipCollisionCheck) {
             _checkCollision(nameHash);
         }
     }
@@ -95,7 +95,7 @@ abstract contract NameLib is Modifier {
      * @param validationMode  `0` = strict write-path validation; `1` = read/unlink path.
      * @return processedLength  Byte length of the canonical name written to memory.
      */
-    function _normalizeAndValidate(uint256 length, bytes32 nameBytes, uint8 validationMode)
+    function _normalizeAndValidate(uint256 length, bytes32 nameBytes, bool validationMode)
         internal
         pure
         returns (uint256 processedLength)
@@ -119,7 +119,7 @@ abstract contract NameLib is Modifier {
 
             // ── STEP 1 · CHARACTER VALIDATION (write path only)
             // ───────────
-            if (validationMode == 0) {
+            if (validationMode) {
                 if (
                     !(char >= 0x61 && char <= 0x7a) && !(char >= 0x32 && char <= 0x39)
                         && char != 0x5f
@@ -135,10 +135,10 @@ abstract contract NameLib is Modifier {
                     assembly ("memory-safe") {
                         switch eq(cursor, 0x00)
                         case 0x01 {
-                            mstore(add(0x00, cursor), char)
+                            mstore(cursor, char)
                         }
                         default {
-                            mstore8(add(0x00, cursor), shr(0xf8, char))
+                            mstore8(cursor, shr(0xf8, char))
                         }
                         cursor := add(cursor, 0x01)
                     }
@@ -162,10 +162,10 @@ abstract contract NameLib is Modifier {
                 assembly ("memory-safe") {
                     switch eq(cursor, 0x00)
                     case 0x01 {
-                        mstore(add(0x00, cursor), char)
+                        mstore(cursor, char)
                     }
                     default {
-                        mstore8(add(0x00, cursor), shr(0xf8, char))
+                        mstore8(cursor, shr(0xf8, char))
                     }
                     cursor := add(cursor, 0x01)
                 }

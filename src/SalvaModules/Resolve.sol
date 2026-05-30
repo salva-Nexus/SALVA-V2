@@ -71,7 +71,7 @@ abstract contract Resolve is NameLib {
 
         // mark = 1 → skip strict character validation (read path)
         uint256 lengthWithoutNamespace =
-            _normalizeAndValidate(fullLength > 32 ? nameLength : fullLength, nameData, 1);
+            _normalizeAndValidate(fullLength > 32 ? nameLength : fullLength, nameData, false);
 
         bytes31 namespaceHandle;
         assembly {
@@ -84,8 +84,9 @@ abstract contract Resolve is NameLib {
             namespaceHandle := mload(add(0x80, lengthWithoutNamespace))
         }
 
-        // skipCollisionCheck = 1 → view function, skip collision guard
-        bytes32 nameHash = _computeNameHash(namespaceHandle, lengthWithoutNamespace, fullLength, 1);
+        // skipCollisionCheck = true → view function, skip collision guard
+        bytes32 nameHash =
+            _computeNameHash(namespaceHandle, lengthWithoutNamespace, fullLength, true);
 
         assembly {
             wallet := sload(nameHash)

@@ -67,12 +67,12 @@ abstract contract UnlinkName is LinkName {
         }
 
         // validationMode = 1 → skip strict char validation (unlink/read path)
-        uint256 processedNameLen = _normalizeAndValidate(nameLength, nameBytes, 1);
+        uint256 processedNameLen = _normalizeAndValidate(nameLength, nameBytes, false);
 
         uint256 fullLength = processedNameLen + uint256(uint8(namespaceLength));
 
-        // skipCollisionCheck = 1 → slot must already exist, skip guard
-        bytes32 nameHash = _computeNameHash(namespaceHandle, processedNameLen, fullLength, 1);
+        // skipCollisionCheck = true → slot must already exist, skip guard
+        bytes32 nameHash = _computeNameHash(namespaceHandle, processedNameLen, fullLength, true);
 
         bytes32 ownershipKey = _checkCaller(caller, nameHash);
 

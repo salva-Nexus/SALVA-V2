@@ -127,4 +127,9 @@ contract LinkName is Setup {
             keccak256(rData2), keccak256(abi.encodePacked(Errors.Errors__InvalidLength.selector))
         );
     }
+
+    function test_Absolute() external initialized {
+        bytes memory name = bytes("charles@salva");
+        _start(name, owner, owner, owner, 0);
+    }
 }
