@@ -21,7 +21,6 @@ contract DeployImpl is Script {
     }
 
     function upgrade() public {
-
         // address ngnsMainnet = address(0x78E9917e6A7D7DD2fd3fc031723741F4f755641C);
         // address ngnsTestnet = (0xae7597fa3414Bc94254fA7777663882355ED6Cb7);
         Singleton singProxyMainnet = Singleton(0xD5B1Cb07403b946b536c77a6102723808971c87C);
@@ -57,6 +56,5 @@ contract DeployImpl is Script {
         }
 
         // console.log("Singleton upgraded to:", address(newSingleton));
-
     }
 }
