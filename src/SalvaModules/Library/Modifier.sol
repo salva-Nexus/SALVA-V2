@@ -38,9 +38,9 @@ abstract contract Modifier is Errors {
             tstore(0x00, 0x01)
         }
         _;
-        assembly {
-            tstore(0x00, 0x00) // will comment out during deployment, this is just for test
-        }
+        // assembly {
+        //     tstore(0x00, 0x00) // will comment out during deployment, this is just for test
+        // }
     }
 
     // ─────────────────────────────────────────────────────────────────────────

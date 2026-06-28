@@ -63,20 +63,22 @@ abstract contract Resolve is NameLib {
             nameData := calldataload(aliasName.offset)
         }
 
-        uint256 nameLength;
+        uint256 slashedTo32Bytes;
+        // NameLib Normalization is smart enough to know where the actual name stops
+        // This is incase part of a namespace was slashed
         if (fullLength > 32) {
             uint256 rem = fullLength - 32;
-            nameLength = fullLength - rem;
+            slashedTo32Bytes = fullLength - rem;
         }
 
         // mark = 1 → skip strict character validation (read path)
         uint256 lengthWithoutNamespace =
-            _normalizeAndValidate(fullLength > 32 ? nameLength : fullLength, nameData, false);
+            _normalizeAndValidate(fullLength > 32 ? slashedTo32Bytes : fullLength, nameData, false);
 
         bytes31 namespaceHandle;
         assembly {
-            // Copy 48 bytes of calldata to scratch space at 0x80
-            calldatacopy(0x80, aliasName.offset, 0x30)
+            // Copy 63 bytes of calldata to scratch space at 0x80
+            calldatacopy(0x80, aliasName.offset, 0x3f)
 
             // Extract the namespace handle starting immediately after the local name.
             // Diagram: [ Local Name ][at][ Namespace ]
