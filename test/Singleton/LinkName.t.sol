@@ -126,7 +126,7 @@ contract LinkName is Setup {
     }
 
     function test_Not() external initialized {
-        bytes memory _name = bytes("thisnameislongandshouldnotrever");
+        bytes memory _name = bytes("thisnameislongandshouldnotre");
         _start(_name, owner, owner, owner, 0);
         address addr = singleton.resolveAddress(bytes(abi.encodePacked(_name, "@salva")));
         assertEq(addr, owner);

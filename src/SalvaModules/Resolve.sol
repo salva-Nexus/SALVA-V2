@@ -77,8 +77,7 @@ abstract contract Resolve is NameLib {
 
         bytes31 namespaceHandle;
         assembly {
-            // Copy 63 bytes of calldata to scratch space at 0x80
-            calldatacopy(0x80, aliasName.offset, 0x3f)
+            calldatacopy(0x80, aliasName.offset, fullLength)
 
             // Extract the namespace handle starting immediately after the local name.
             // Diagram: [ Local Name ][at][ Namespace ]
