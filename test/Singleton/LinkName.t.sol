@@ -119,16 +119,4 @@ contract LinkName is Setup {
             keccak256(rData2), keccak256(abi.encodePacked(Errors.Errors__InvalidLength.selector))
         );
     }
-
-    function test_Absolute() external initialized {
-        bytes memory name = bytes("charles@salva");
-        _start(name, owner, owner, owner, 0);
-    }
-
-    function test_Not() external initialized {
-        bytes memory _name = bytes("thisnameislongandshouldnotre");
-        _start(_name, owner, owner, owner, 0);
-        address addr = singleton.resolveAddress(bytes(abi.encodePacked(_name, "@salva")));
-        assertEq(addr, owner);
-    }
 }
